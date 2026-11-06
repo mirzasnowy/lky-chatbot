@@ -1,9 +1,9 @@
 {
  "summary": {
-  "n": 12,
-  "recall@3": 0.9166666666666666,
-  "recall@5": 1.0,
-  "mrr": 0.8541666666666666,
+  "n": 15,
+  "recall@3": 0.9333333333333333,
+  "recall@5": 0.9333333333333333,
+  "mrr": 0.9,
   "method": "hybrid dense (bge-small-en-v1.5) + BM25, RRF k=60, top-5"
  },
  "rows": [
@@ -15,8 +15,8 @@
    "top5": [
     "01",
     "13",
-    "01",
-    "01",
+    "14",
+    "05",
     "01"
    ],
    "first_hit_rank": 1,
@@ -43,14 +43,16 @@
   {
    "q": "What is his view on China and bilingualism?",
    "expect": [
-    "04"
+    "04",
+    "16",
+    "26"
    ],
    "top5": [
-    "04",
-    "04",
-    "03",
-    "03",
-    "04"
+    "16",
+    "26",
+    "16",
+    "16",
+    "26"
    ],
    "first_hit_rank": 1,
    "recall@3": true,
@@ -78,15 +80,15 @@
     "05"
    ],
    "top5": [
-    "01",
+    "14",
+    "14",
+    "14",
     "09",
-    "13",
-    "05",
-    "01"
+    "26"
    ],
-   "first_hit_rank": 4,
+   "first_hit_rank": null,
    "recall@3": false,
-   "recall@5": true
+   "recall@5": false
   },
   {
    "q": "What was his view on the press and government?",
@@ -111,10 +113,10 @@
    ],
    "top5": [
     "13",
+    "23",
     "04",
-    "08",
     "04",
-    "04"
+    "08"
    ],
    "first_hit_rank": 1,
    "recall@3": true,
@@ -126,13 +128,13 @@
     "10"
    ],
    "top5": [
-    "02",
     "10",
     "02",
     "02",
-    "10"
+    "26",
+    "02"
    ],
-   "first_hit_rank": 2,
+   "first_hit_rank": 1,
    "recall@3": true,
    "recall@5": true
   },
@@ -175,10 +177,10 @@
    ],
    "top5": [
     "09",
+    "01",
     "05",
-    "01",
-    "01",
-    "09"
+    "09",
+    "01"
    ],
    "first_hit_rank": 1,
    "recall@3": true,
@@ -193,8 +195,56 @@
     "12",
     "02",
     "12",
+    "26",
+    "14"
+   ],
+   "first_hit_rank": 1,
+   "recall@3": true,
+   "recall@5": true
+  },
+  {
+   "q": "What did Lee Kuan Yew say about death, ageing and the right to die?",
+   "expect": [
+    "15"
+   ],
+   "top5": [
+    "15",
+    "09",
+    "03",
     "02",
-    "01"
+    "03"
+   ],
+   "first_hit_rank": 1,
+   "recall@3": true,
+   "recall@5": true
+  },
+  {
+   "q": "What was his view on the Hong Kong handover and US-China relations?",
+   "expect": [
+    "25"
+   ],
+   "top5": [
+    "25",
+    "25",
+    "25",
+    "25",
+    "25"
+   ],
+   "first_hit_rank": 1,
+   "recall@3": true,
+   "recall@5": true
+  },
+  {
+   "q": "What did he say about his own experience learning languages?",
+   "expect": [
+    "26"
+   ],
+   "top5": [
+    "26",
+    "26",
+    "16",
+    "16",
+    "26"
    ],
    "first_hit_rank": 1,
    "recall@3": true,
