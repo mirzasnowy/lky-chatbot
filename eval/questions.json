@@ -91,5 +91,17 @@
   "expect": [
    "26"
   ]
+ },
+ {
+  "q": "What did he say about Asian values and the renaissance of Asian culture?",
+  "expect": [
+   "30"
+  ]
+ },
+ {
+  "q": "What did he say about greening Singapore and the Garden City?",
+  "expect": [
+   "33"
+  ]
  }
 ]
