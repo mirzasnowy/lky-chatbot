@@ -44,6 +44,17 @@ Honest limits, stated upfront:
 3. **Retrieval** (`src/rag.py`): hybrid — dense cosine + BM25 (title indexed
    twice), fused by Reciprocal Rank Fusion (k=60), top-5 chunks. The same
    hybrid design as my thesis system NusaNara (dense + lexical, RRF).
+   Embeddings are BAAI/bge-small-en-v1.5 (384-dim): a small model is the
+   right call at this scale — with 142 chunks, retrieval quality is set by
+   the hybrid fusion, not by embedding size, and a larger model would add
+   latency and memory for no measurable recall gain. The hybrid exists
+   because dense-only failed measurably: it missed the obvious speech on 2
+   of 5 probe questions (the 1966 education speech ranked 4th on its own
+   title question; the 2004 China speech ranked 6th), and BM25 fixed both,
+   because titles are lexical. RRF fuses the two rankings without
+   hand-tuned weights. No vector database: 142 vectors is a NumPy file, not
+   a service. No RAG framework: the whole retrieval path is ~168 lines,
+   every step inspectable.
 4. **Generation**: the top-5 passages plus a strict system prompt
    (`prompts/system.md`) go to a model over an OpenAI-compatible API. The
    fallback chain is: free OpenRouter `google/gemma-4-26b-a4b-it:free` →
@@ -51,14 +62,27 @@ Honest limits, stated upfront:
    `deepseek/deepseek-v4-flash` (≈ Rp 5/answer). The chain moves on
    automatically on error, timeout, or rate limit, with a per-tier cooldown.
    The reader can also pick a model directly in the UI (Auto, Gemma 4 26B
-   Free, GPT-6 Luna, DeepSeek V4 Flash, DeepSeek V4 Pro); DeepSeek V4 Pro
-   is picker-only, not in the Auto chain, because it costs ≈ Rp 10/answer
-   and takes ~29 seconds. Free models are rate-limited and the free list
-   rotates, so the free model id is an env var (`OPENROUTER_MODEL`).
+   Free, GPT-6 Luna, DeepSeek V4 Flash, DeepSeek V4 Pro). Each tier is
+   there for a reason: Gemma goes first because grounded extraction and
+   short synthesis from passages needs a mid-size instruction model, not
+   open-ended reasoning, and at Rp 0 it costs nothing. GPT-6 Luna is the
+   price-performance pick — a current-generation model at the lowest paid
+   price in the chain (Rp 720/1M input tokens) that answered every live
+   test cleanly. DeepSeek V4 Flash is the stronger second fallback, a fast
+   reasoning model for questions needing careful synthesis across five
+   passages. DeepSeek V4 Pro is picker-only, not in the Auto chain: the
+   most capable tier, but at ≈ Rp 10/answer and ~29 seconds, its marginal
+   gain on short grounded answers does not justify 2.5x the cost and 7x the
+   latency on every answer. Expensive frontier models were deliberately not
+   used: retrieval, not generation, is the bottleneck, and nothing in the
+   eval suggests a larger model would retrieve or cite better. The free
+   model id is an env var (`OPENROUTER_MODEL`).
 
 ## Retrieval evaluation (`eval/`)
 
 17 questions, each with the expected speech(es). Run: `python eval/run_eval.py`.
+Seventeen questions is small, but each has a known expected speech, so the
+numbers measure retrieval rather than opinion.
 
 | metric | value |
 |---|---|
@@ -121,18 +145,22 @@ because the API returns chunk IDs rather than passage text), where the
 passage sits in its speech ("Part X of Y"), and the question's keywords
 highlighted. Citations [S1]–[S5] jump to the matching source card. Answers
 can be read aloud (per-message Listen button, never automatic), shared as a
-link (read-only view; links up to 8,000 characters, longer conversations
-fall back to copying the conversation as text), and rendered as light
-markdown through a safe renderer that escapes HTML first.
+link (read-only view; links up to 8,000 characters — measured: a 2-question
+conversation encodes to ~6,400 — longer conversations fall back to copying
+the conversation as text), and rendered as light markdown through a safe
+renderer that escapes HTML first.
 
 ## Hosting and safeguards
 
 FastAPI on Render's free tier (512 MB; model + retrieval measured at
-~266 MB) and a static page on Cloudflare Pages. Safeguards: input length
+~266 MB) and a static page on Cloudflare Pages — total hosting cost $0,
+which is the point: a working demo with no budget. Safeguards: input length
 limit (3–500 chars), per-IP rate limit (20 requests / 10 min), a daily cap
 on paid calls (300/day), no API keys in the repo, page, or logs (server env
-vars only). The page wakes the sleeping backend on load and shows its
-status; the example conversations stay visible while it sleeps.
+vars only). The rate limit and daily cap bound the worst-case paid bill to
+~Rp 1,500/day, so a scraper cannot burn the budget. The page wakes the
+sleeping backend on load and shows its status; the example conversations
+stay visible while it sleeps.
 
 ## What went wrong
 
