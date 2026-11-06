@@ -1,9 +1,9 @@
 {
  "summary": {
-  "n": 15,
-  "recall@3": 0.9333333333333333,
-  "recall@5": 0.9333333333333333,
-  "mrr": 0.9,
+  "n": 17,
+  "recall@3": 0.8823529411764706,
+  "recall@5": 0.9411764705882353,
+  "mrr": 0.8970588235294118,
   "method": "hybrid dense (bge-small-en-v1.5) + BM25, RRF k=60, top-5"
  },
  "rows": [
@@ -130,8 +130,8 @@
    "top5": [
     "10",
     "02",
-    "02",
     "26",
+    "02",
     "02"
    ],
    "first_hit_rank": 1,
@@ -145,13 +145,13 @@
    ],
    "top5": [
     "12",
-    "02",
-    "03",
     "05",
-    "02"
+    "03",
+    "02",
+    "03"
    ],
-   "first_hit_rank": 2,
-   "recall@3": true,
+   "first_hit_rank": 4,
+   "recall@3": false,
    "recall@5": true
   },
   {
@@ -161,9 +161,9 @@
    ],
    "top5": [
     "07",
+    "30",
     "05",
     "07",
-    "05",
     "02"
    ],
    "first_hit_rank": 1,
@@ -180,7 +180,7 @@
     "01",
     "05",
     "09",
-    "01"
+    "30"
    ],
    "first_hit_rank": 1,
    "recall@3": true,
@@ -193,10 +193,10 @@
    ],
    "top5": [
     "12",
-    "02",
     "12",
     "26",
-    "14"
+    "14",
+    "02"
    ],
    "first_hit_rank": 1,
    "recall@3": true,
@@ -212,7 +212,7 @@
     "09",
     "03",
     "02",
-    "03"
+    "02"
    ],
    "first_hit_rank": 1,
    "recall@3": true,
@@ -244,6 +244,38 @@
     "26",
     "16",
     "16",
+    "26"
+   ],
+   "first_hit_rank": 1,
+   "recall@3": true,
+   "recall@5": true
+  },
+  {
+   "q": "What did he say about Asian values and the renaissance of Asian culture?",
+   "expect": [
+    "30"
+   ],
+   "top5": [
+    "30",
+    "16",
+    "03",
+    "01",
+    "04"
+   ],
+   "first_hit_rank": 1,
+   "recall@3": true,
+   "recall@5": true
+  },
+  {
+   "q": "What did he say about greening Singapore and the Garden City?",
+   "expect": [
+    "33"
+   ],
+   "top5": [
+    "33",
+    "33",
+    "02",
+    "04",
     "26"
    ],
    "first_hit_rank": 1,
