@@ -62,6 +62,10 @@ app.add_middleware(
 class ChatIn(BaseModel):
     question: str = Field(min_length=3, max_length=500)
     k: int = Field(default=5, ge=1, le=8)
+    # UI model choice (see llm.MODEL_CHOICES). "auto" is the default chain
+    # (free -> luna -> flash); a named choice is tried first, then the
+    # rest of the chain. Invalid values are rejected with a 422.
+    model: str = Field(default="auto", pattern="^(auto|free|luna|flash|pro)$")
 
 
 def check_rate_limit(request: Request):
@@ -117,12 +121,14 @@ def chat(body: ChatIn, request: Request):
     t0 = time.monotonic()
     chunks = retrieve(body.question, k=body.k)
     t_retrieval = int((time.monotonic() - t0) * 1000)
-    result = llm.generate(build_messages(body.question, chunks))
+    result = llm.generate(build_messages(body.question, chunks),
+                          prefer=body.model)
     total_ms = int((time.monotonic() - t0) * 1000)
     sources = _sources(chunks)
     meta = {
         "provider": result["provider"], "model": result["model"],
         "tier": result["tier"], "fallback_used": result["fallback_used"],
+        "requested_model": body.model,
         "truncated": result["truncated"],
         "attempts": result["attempts"],
         "retrieval": {"k": body.k, "method": "hybrid-rrf",
