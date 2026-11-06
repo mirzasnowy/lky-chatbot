@@ -150,3 +150,78 @@ def test_think_block_stripped():
     assert "<think>" not in out["answer"]
     assert "reason about this" not in out["answer"]
     assert out["answer"] == LONG_ANSWER
+
+
+def test_prefer_luna_tried_first():
+    """prefer='luna' reorders the chain: Luna answers first, no fallback."""
+    seen = []
+
+    def handler(request):
+        seen.append(json.loads(request.content)["model"])
+        return httpx.Response(200, json=_ok_response())
+
+    llm.set_client(_client_for(handler))
+    out = llm.generate(MESSAGES, prefer="luna")
+    assert out["ok"] is True
+    assert out["model"] == "openai/gpt-6-luna"
+    assert out["fallback_used"] is False
+    assert len(out["attempts"]) == 1
+    assert seen == ["openai/gpt-6-luna"]
+
+
+def test_prefer_pro_falls_back_to_free():
+    """prefer='pro' tries Pro first; on failure it falls back to the free tier."""
+    seen = []
+
+    def handler(request):
+        model = json.loads(request.content)["model"]
+        seen.append(model)
+        if model == "deepseek/deepseek-v4-pro":
+            return httpx.Response(500, json={"error": "server error"})
+        return httpx.Response(200, json=_ok_response())
+
+    llm.set_client(_client_for(handler))
+    out = llm.generate(MESSAGES, prefer="pro")
+    assert out["ok"] is True
+    assert out["model"] == "google/gemma-4-26b-a4b-it:free"
+    assert out["fallback_used"] is True
+    assert seen[0] == "deepseek/deepseek-v4-pro"
+    assert out["attempts"][0]["error"] == "server_error"
+    assert out["attempts"][1]["ok"] is True
+    assert out["attempts"][1]["model"] == "google/gemma-4-26b-a4b-it:free"
+
+
+def test_prefer_auto_keeps_default_order():
+    """prefer='auto' is the same as no preference: free tier first."""
+    seen = []
+
+    def handler(request):
+        seen.append(json.loads(request.content)["model"])
+        return httpx.Response(200, json=_ok_response())
+
+    llm.set_client(_client_for(handler))
+    out = llm.generate(MESSAGES, prefer="auto")
+    assert out["ok"] is True
+    assert out["model"] == "google/gemma-4-26b-a4b-it:free"
+    assert out["fallback_used"] is False
+    assert seen == ["google/gemma-4-26b-a4b-it:free"]
+
+
+def test_prefer_flash_skips_free_when_it_fails():
+    """prefer='flash' tries Flash first; on failure it falls back to free."""
+    seen = []
+
+    def handler(request):
+        model = json.loads(request.content)["model"]
+        seen.append(model)
+        if model == "deepseek/deepseek-v4-flash":
+            return httpx.Response(429, json={"error": "rate limited"})
+        return httpx.Response(200, json=_ok_response())
+
+    llm.set_client(_client_for(handler))
+    out = llm.generate(MESSAGES, prefer="flash")
+    assert out["ok"] is True
+    assert out["model"] == "google/gemma-4-26b-a4b-it:free"
+    assert out["fallback_used"] is True
+    assert seen[0] == "deepseek/deepseek-v4-flash"
+    assert out["attempts"][0]["error"] == "rate_limited"
