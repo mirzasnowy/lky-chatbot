@@ -1,7 +1,8 @@
 /* Lee Kuan Yew chatbot UI. Plain JS, no framework.
    Talks to GET /health and POST /chat on API_BASE (see config.js).
-   Answers are rendered with textContent only, never innerHTML from the
-   model. Chat history lives in localStorage, never on the server. */
+   Answers are rendered as safe markdown (HTML is escaped first, then a
+   small subset is rendered as DOM nodes; model text never goes through
+   innerHTML). Chat history lives in localStorage, never on the server. */
 (function () {
   "use strict";
 
@@ -12,6 +13,9 @@
   var HISTORY_KEY = "lky-chat-history-v1";
   var HISTORY_MAX = 50;
   var POST_COOLDOWN_S = 3;
+  var SIDEBAR_KEY = "lky-sidebar-open";
+  var MODEL_KEY = "lky-model-choice";
+  var MODEL_CHOICES = ["auto", "free", "luna", "flash", "pro"];
 
   /* 4 questions from eval/questions.json, each ranked first in
      eval/results.json (first_hit_rank 1). The 5th is deliberately
@@ -46,40 +50,107 @@
     corpus: null,
     health: null,
     msgCount: 0,
+    view: "chat",
+    title: null,
+    sharedView: false,
   };
 
   var el = {};
-  ["live-pill", "pill-stats", "model-badge", "status-pill", "banner",
-   "thread", "empty-state", "chips", "try-list", "composer", "input",
-   "counter", "send", "new-chat", "clear-history", "tts-stop",
-   "tab-chat", "tab-examples", "tab-corpus", "tab-about"]
+  ["hamburger", "top-title", "model-picker", "share-btn", "tts-stop",
+   "banner", "content", "thread", "empty-state", "chips", "try-list",
+   "composer", "input", "counter", "send", "new-chat", "new-chat-side",
+   "clear-history", "clear-history-side", "sidebar-backdrop", "rail-left",
+   "view-chat", "view-examples", "view-corpus", "view-about",
+   "examples-col", "corpus-col", "about-col"]
     .forEach(function (id) { el[id] = document.getElementById(id); });
 
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function scrollToBottom() { el.content.scrollTop = el.content.scrollHeight; }
 
-  /* ---------------- collapsible side panels ---------------- */
-  var PANEL_KEYS = { sidebar: "lky-sidebar-open", panel: "lky-panel-open" };
-  function readPanelOpen(which) {
-    try { return localStorage.getItem(PANEL_KEYS[which]) !== "0"; } catch (e) { return true; }
+  /* ---------------- single sidebar ---------------- */
+  function sidebarOpen() {
+    try { return localStorage.getItem(SIDEBAR_KEY) !== "0"; } catch (e) { return true; }
   }
-  function applyPanel(which, open) {
+  function syncBackdrop(open) {
+    el["sidebar-backdrop"].hidden = !(open && window.innerWidth <= 640);
+  }
+  function applySidebar(open, persist) {
     var layout = document.querySelector(".layout");
-    var isLeft = which === "sidebar";
-    layout.classList.toggle(isLeft ? "no-sidebar" : "no-panel", !open);
-    var btn = document.getElementById(isLeft ? "rail-left" : "rail-right");
-    btn.classList.toggle("closed", !open);
-    btn.textContent = isLeft ? (open ? "‹" : "›") : (open ? "›" : "‹");
-    var label = (open ? "Hide " : "Show ") + (isLeft ? "sidebar" : "panel");
-    btn.setAttribute("aria-label", label);
-    btn.title = label;
-    try { localStorage.setItem(PANEL_KEYS[which], open ? "1" : "0"); } catch (e) { /* ignore */ }
+    layout.classList.toggle("no-sidebar", !open);
+    var rail = el["rail-left"];
+    rail.classList.toggle("closed", !open);
+    rail.textContent = open ? "‹" : "›";
+    var label = (open ? "Hide " : "Show ") + "sidebar";
+    rail.setAttribute("aria-label", label);
+    rail.title = label;
+    syncBackdrop(open);
+    if (persist !== false) {
+      try { localStorage.setItem(SIDEBAR_KEY, open ? "1" : "0"); } catch (e) { /* ignore */ }
+    }
   }
-  function togglePanel(which) { applyPanel(which, !readPanelOpen(which)); }
-  document.getElementById("rail-left").addEventListener("click", function () { togglePanel("sidebar"); });
-  document.getElementById("rail-right").addEventListener("click", function () { togglePanel("panel"); });
-  applyPanel("sidebar", readPanelOpen("sidebar"));
-  applyPanel("panel", readPanelOpen("panel"));
+  function toggleSidebar() { applySidebar(!sidebarOpen()); }
+  function closeSidebarDrawer() {
+    if (window.innerWidth <= 640 && sidebarOpen()) applySidebar(false);
+  }
+  el.hamburger.addEventListener("click", toggleSidebar);
+  el["rail-left"].addEventListener("click", toggleSidebar);
+  el["sidebar-backdrop"].addEventListener("click", function () { applySidebar(false); });
+  window.addEventListener("resize", function () { syncBackdrop(sidebarOpen()); });
+  // On mobile the drawer starts closed; on desktop it restores the saved state.
+  applySidebar(window.innerWidth > 640 ? sidebarOpen() : false, false);
+
+  /* ---------------- views (one sidebar, center switches) ---------------- */
+  var VIEWS = ["chat", "examples", "corpus", "about"];
+  var VIEW_TITLES = { examples: "Examples", corpus: "Corpus", about: "About" };
+  function setView(name) {
+    if (VIEWS.indexOf(name) < 0) name = "chat";
+    state.view = name;
+    document.querySelector(".layout").dataset.view = name;
+    $all(".sidenav button").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-view") === name);
+    });
+    VIEWS.forEach(function (v) {
+      el["view-" + v].hidden = (v !== name);
+    });
+    el.composer.hidden = (name !== "chat") || state.sharedView;
+    updateTopTitle();
+    if (!state.sharedView) {
+      try { history.replaceState(null, "", "#" + name); } catch (e) { /* ignore */ }
+    }
+    if (name !== "chat") el.content.scrollTop = 0;
+    closeSidebarDrawer();
+  }
+  $all(".sidenav button").forEach(function (b) {
+    b.addEventListener("click", function () { setView(b.getAttribute("data-view")); });
+  });
+
+  function updateTopTitle() {
+    var t = state.view === "chat" ? (state.title || "New chat") : VIEW_TITLES[state.view];
+    el["top-title"].textContent = t;
+  }
+  function setConversationTitle(q) {
+    if (state.title) return;
+    state.title = q.length > 42 ? q.slice(0, 42) + "…" : q;
+    updateTopTitle();
+  }
+
+  /* ---------------- model picker ---------------- */
+  function getModelChoice() {
+    try {
+      var v = localStorage.getItem(MODEL_KEY);
+      return MODEL_CHOICES.indexOf(v) >= 0 ? v : "auto";
+    } catch (e) { return "auto"; }
+  }
+  function setModelChoice(v) {
+    if (MODEL_CHOICES.indexOf(v) < 0) v = "auto";
+    try { localStorage.setItem(MODEL_KEY, v); } catch (e) { /* ignore */ }
+    el["model-picker"].value = v;
+  }
+  el["model-picker"].addEventListener("change", function () {
+    setModelChoice(el["model-picker"].value);
+  });
+  setModelChoice(getModelChoice());
 
   /* ---------------- text-to-speech (browser speechSynthesis, free) ----------------
      No auto-read: a speaker button on each assistant message reads that
@@ -92,7 +163,8 @@
   function cleanSpeechText(answer) {
     return String(answer)
       .replace(/\[S\d+(?:\s*,\s*S\d+)*\]/g, "")  // [S1], [S1, S4]
-      .replace(/[*_`#]+/g, "")                    // markdown-ish artifacts
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")    // [label](url) -> label
+      .replace(/[*_`#>]+/g, "")                    // markdown artifacts
       .replace(/\s+/g, " ")
       .trim();
   }
@@ -143,6 +215,108 @@
     try { window.speechSynthesis.speak(u); } catch (e) { ttsResetButton(); }
   }
 
+  /* ---------------- share conversation ----------------
+     The link encodes the conversation in the URL hash (#share=...), so
+     opening it reconstructs the chat client-side. Nothing is sent to a
+     server. If the link would be too long for a URL, the conversation is
+     copied as markdown text instead. */
+  function conversationForShare() {
+    return loadHistory().map(function (it) {
+      return {
+        q: it.question,
+        a: it.answer,
+        s: (it.sources || []).map(function (src) {
+          return { t: src.title, d: src.date, u: src.url, s: src.source };
+        }),
+        m: { model: it.meta && it.meta.model, provider: it.meta && it.meta.provider },
+      };
+    });
+  }
+  function encodeShare(items) {
+    return btoa(unescape(encodeURIComponent(JSON.stringify(items))))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function decodeShare(b64) {
+    return JSON.parse(decodeURIComponent(escape(
+      atob(b64.replace(/-/g, "+").replace(/_/g, "/")))));
+  }
+  function conversationToMarkdown(items) {
+    return items.map(function (it) {
+      var out = "Q: " + it.q + "\n\n" + (it.a || "(no generated answer)") + "\n";
+      (it.s || []).forEach(function (src, i) {
+        out += "\n[" + (i + 1) + "] " + src.t + (src.d ? " (" + src.d + ")" : "") +
+          (src.u ? " — " + src.u : "");
+      });
+      return out;
+    }).join("\n\n---\n\n");
+  }
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function (resolve, reject) {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); resolve(); } catch (e) { reject(e); }
+      document.body.removeChild(ta);
+    });
+  }
+  function shareConversation() {
+    var btn = el["share-btn"];
+    var items = conversationForShare();
+    var done = function (label) {
+      btn.textContent = label;
+      setTimeout(function () { btn.textContent = "Share"; }, 2500);
+    };
+    if (!items.length) { done("Nothing to share yet"); return; }
+    var url = location.origin + location.pathname + "#share=" + encodeShare(items);
+    if (url.length <= 2000) {
+      copyText(url).then(function () { done("Link copied"); },
+                         function () { done("Copy failed"); });
+    } else {
+      copyText(conversationToMarkdown(items)).then(
+        function () { done("Copied as text"); },
+        function () { done("Copy failed"); });
+    }
+  }
+  function loadShared() {
+    var h = location.hash || "";
+    if (h.indexOf("#share=") !== 0) return false;
+    var items;
+    try { items = decodeShare(h.slice(7)); } catch (e) { return false; }
+    if (!Array.isArray(items) || !items.length) return false;
+    state.sharedView = true;
+    hideEmptyState();
+    items.forEach(function (it) {
+      el.thread.appendChild(renderUserBubble(it.q, Date.now()));
+      var sources = (it.s || []).map(function (s) {
+        return { title: s.t, date: s.d, url: s.u, source: s.s || "",
+                 score: null, flags: {} };
+      });
+      el.thread.appendChild(renderAssistant(it.a, sources,
+        { model: it.m && it.m.model, provider: it.m && it.m.provider },
+        Date.now(), false));
+    });
+    el.composer.hidden = true;
+    showBanner("warn", "Shared conversation — read-only. " +
+      '<button type="button" class="btn" id="banner-newchat">Start a new chat</button>');
+    var b = document.getElementById("banner-newchat");
+    if (b) b.addEventListener("click", exitShared);
+    el.content.scrollTop = 0;
+    return true;
+  }
+  function exitShared() {
+    state.sharedView = false;
+    try { history.replaceState(null, "", "#chat"); } catch (e) { /* ignore */ }
+    hideBanner();
+    clearHistory();
+    setView("chat");
+  }
+  el["share-btn"].addEventListener("click", shareConversation);
+
   function fmtNum(n) { return Number(n).toLocaleString("en-US"); }
   function fmtTime(ts) {
     var d = new Date(ts);
@@ -168,31 +342,11 @@
     if (Array.isArray(flags)) return flags;
     return Object.keys(flags).filter(function (k) { return flags[k]; });
   }
-
-  /* ---------------- tabs ---------------- */
-  function setTab(name) {
-    var valid = ["chat", "examples", "corpus", "about"];
-    if (valid.indexOf(name) < 0) name = "chat";
-    $all(".tabs button").forEach(function (b) {
-      var on = b.getAttribute("data-tab") === name;
-      b.classList.toggle("active", on);
-      b.setAttribute("aria-selected", on ? "true" : "false");
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
-    $all(".sidenav button").forEach(function (b) {
-      b.classList.toggle("active", b.getAttribute("data-tab") === name);
-    });
-    ["chat", "examples", "corpus", "about"].forEach(function (t) {
-      el["tab-" + t].hidden = (t !== name);
-    });
-    try { history.replaceState(null, "", "#" + name); } catch (e) { /* ignore */ }
-    if (window.innerWidth <= 640) {
-      var panel = document.getElementById("panel");
-      if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
   }
-  $all("[data-tab]").forEach(function (b) {
-    b.addEventListener("click", function () { setTab(b.getAttribute("data-tab")); });
-  });
 
   /* ---------------- corpus data ---------------- */
   function loadJSON(path) {
@@ -206,14 +360,10 @@
     return loadJSON("./corpus.json").then(function (d) {
       state.corpus = d;
       if (d.flag_labels) FLAG_LABELS = d.flag_labels;
-      el["pill-stats"].textContent =
-        d.stats.speeches + " speeches · " + fmtNum(d.stats.total_words_raw) + " words";
-      renderChatTab(d);
-      renderCorpusTab(d);
-      renderAboutTab(d);
+      renderCorpusView(d);
+      renderAboutView(d);
     }).catch(function () {
-      el["pill-stats"].textContent = "33 speeches · 59,362 words";
-      el["tab-chat"].textContent = "Could not load corpus.json. The chat still works; the corpus panels need the file.";
+      el["corpus-col"].textContent = "Could not load corpus.json. The chat still works; the corpus pages need the file.";
     });
   }
 
@@ -222,7 +372,7 @@
       '</div><div class="lbl">' + lbl + "</div></div>";
   }
 
-  function renderChatTab(d) {
+  function renderCorpusView(d) {
     var s = d.stats;
     var html = "";
     html += '<div class="banner-img"><img src="./assets/banner.jpg" alt="Marina Bay skyline at dusk" loading="lazy">' +
@@ -245,11 +395,7 @@
       "</dl>";
     html += '<div class="note-box"><h3>&#9432; Important Note</h3><p>This archive contains ' + s.speeches +
       " speeches, not the complete works of Lee Kuan Yew. Notable works such as the &ldquo;Graduate Mothers&rdquo; speech (1983) are only available as audio. Some documents are drafts, translations, or partial transcripts.</p></div>";
-    el["tab-chat"].innerHTML = html;
-  }
-
-  function renderCorpusTab(d) {
-    var html = "<h2>All Speeches (" + d.speeches.length + ")</h2><div class=\"speech-list\">";
+    html += "<h2>All Speeches (" + d.speeches.length + ")</h2><div class=\"speech-list\">";
     d.speeches.forEach(function (sp) {
       var flags = (sp.flags || []).map(function (f) {
         return '<span class="flag">' + (FLAG_LABELS[f] || f) + "</span>";
@@ -260,10 +406,10 @@
         " &middot; " + fmtNum(sp.words_clean) + " words &middot; " + sp.n_chunks + " chunks</div>" +
         (flags ? '<div>' + flags + "</div>" : "") + "</div>";
     });
-    el["tab-corpus"].innerHTML = html + "</div>";
+    el["corpus-col"].innerHTML = html + "</div>";
   }
 
-  function renderAboutTab(d) {
+  function renderAboutView(d) {
     var s = d.stats;
     var html = "<h2>About the Corpus</h2><div class=\"stat-grid\">" +
       statBox(s.speeches, "Speeches") +
@@ -302,13 +448,7 @@
       " words in the original speech texts; " + fmtNum(s.total_words_clean) +
       " after cleaning; " + fmtNum(s.total_chunk_words) +
       " counting chunk overlap (~80 words between neighbouring chunks).</p>";
-    el["tab-about"].innerHTML = html;
-  }
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
-    });
+    el["about-col"].innerHTML = html;
   }
 
   /* ---------------- examples ---------------- */
@@ -317,19 +457,19 @@
       var items = d.items || d.chats || [];
       renderExamples(items, d);
     }).catch(function () {
-      el["tab-examples"].innerHTML = '<div class="example-empty">Could not load example chats.</div>';
+      el["examples-col"].innerHTML = '<div class="example-empty">Could not load example chats.</div>';
     });
   }
 
   function renderExamples(items, d) {
     if (!items || items.length === 0) {
-      el["tab-examples"].innerHTML = '<div class="example-empty">No example chats generated yet. ' +
+      el["examples-col"].innerHTML = '<div class="example-empty">No example chats generated yet. ' +
         "Example chats are produced by running the real system (retrieval + generation) and are added here with their sources &mdash; nothing is invented.</div>";
       return;
     }
     var html = "<h2>Real Example Conversations</h2>" +
       '<p class="small muted">These are real outputs from the live pipeline, saved so they stay available while the server sleeps. Not edited.</p>';
-    el["tab-examples"].innerHTML = html;
+    el["examples-col"].innerHTML = html;
     items.forEach(function (it) {
       var card = document.createElement("div");
       card.className = "example-card";
@@ -339,7 +479,7 @@
       card.appendChild(q);
       card.appendChild(renderAssistant(it.answer, it.sources || [], it.meta || {},
         it.generated_at || d.generated_at, true));
-      el["tab-examples"].appendChild(card);
+      el["examples-col"].appendChild(card);
     });
   }
 
@@ -356,7 +496,7 @@
       arrow.textContent = "›";
       b.appendChild(span);
       b.appendChild(arrow);
-      b.addEventListener("click", function () { send(item.q); });
+      b.addEventListener("click", function () { setView("chat"); send(item.q); });
       el["try-list"].appendChild(b);
     });
     var out = document.createElement("button");
@@ -373,7 +513,7 @@
     arrow.textContent = "›";
     out.appendChild(span);
     out.appendChild(arrow);
-    out.addEventListener("click", function () { send(OUT_OF_SCOPE_Q); });
+    out.addEventListener("click", function () { setView("chat"); send(OUT_OF_SCOPE_Q); });
     el["try-list"].appendChild(out);
 
     TRY_QUESTIONS.forEach(function (item) {
@@ -392,16 +532,10 @@
     el["chips"].appendChild(oc);
   }
 
-  /* ---------------- server status ---------------- */
-  function setStatus(s) {
-    state.server = s;
-    var pill = el["status-pill"];
-    if (s === "unknown") { pill.hidden = true; pill.textContent = ""; return; }
-    pill.hidden = false;
-    if (s === "live") { pill.className = "status-pill live"; pill.textContent = "● Live"; }
-    if (s === "waking") { pill.className = "status-pill waking"; pill.textContent = "Waking up… (~1 min)"; }
-    if (s === "down") { pill.className = "status-pill down"; pill.textContent = "● Unreachable"; }
-  }
+  /* ---------------- server status ----------------
+     The top bar stays clean: server state is shown only through the
+     banner (waking / unreachable), never as a badge. */
+  function setStatus(s) { state.server = s; }
 
   function showBanner(kind, html) {
     el.banner.hidden = false;
@@ -427,7 +561,7 @@
   function pingHealth() {
     var started = Date.now();
     var slowTimer = setTimeout(function () {
-      if (state.server === "unknown") {
+      if (state.server === "unknown" && !state.sharedView) {
         setStatus("waking");
         showBanner("warn", "The server runs on free hosting and sleeps when idle. It&rsquo;s waking up now; your question will be sent automatically.");
       }
@@ -438,23 +572,22 @@
         state.health = h;
         state.lastSuccessAt = Date.now();
         setStatus("live");
-        hideBanner();
-        if (h.free_model) {
-          el["model-badge"].title = "Primary model: " + h.free_model +
-            ". If it is unavailable, a low-cost backup model answers instead.";
-        }
+        // A shared (read-only) conversation keeps its own banner.
+        if (!state.sharedView) hideBanner();
         return true;
       }).catch(function () {
         if (Date.now() - started > 150000) {
           clearTimeout(slowTimer);
           setStatus("down");
-          showBanner("err", "Couldn't reach the server. You can still read real example conversations. " +
-            '<button type="button" class="btn" id="banner-examples">See examples</button> ' +
-            '<button type="button" class="btn" id="banner-retry">Try again</button>');
-          var be = document.getElementById("banner-examples");
-          if (be) be.addEventListener("click", function () { setTab("examples"); });
-          var br = document.getElementById("banner-retry");
-          if (br) br.addEventListener("click", function () { hideBanner(); setStatus("unknown"); pingHealth(); });
+          if (!state.sharedView) {
+            showBanner("err", "Couldn't reach the server. You can still read real example conversations. " +
+              '<button type="button" class="btn" id="banner-examples">See examples</button> ' +
+              '<button type="button" class="btn" id="banner-retry">Try again</button>');
+            var be = document.getElementById("banner-examples");
+            if (be) be.addEventListener("click", function () { setView("examples"); });
+            var br = document.getElementById("banner-retry");
+            if (br) br.addEventListener("click", function () { hideBanner(); setStatus("unknown"); pingHealth(); });
+          }
           return false;
         }
         return new Promise(function (res) { setTimeout(res, 4000); }).then(attempt);
@@ -492,6 +625,8 @@
   }
   function clearHistory() {
     stopSpeech();
+    state.title = null;
+    updateTopTitle();
     try { localStorage.removeItem(HISTORY_KEY); } catch (e) { /* ignore */ }
     el.thread.innerHTML = "";
     el.thread.appendChild(el["empty-state"]);
@@ -507,7 +642,168 @@
       el.thread.appendChild(renderUserBubble(it.question, it.ts));
       el.thread.appendChild(renderAssistant(it.answer, it.sources || [], it.meta || {}, it.ts, false));
     });
-    el.thread.scrollTop = el.thread.scrollHeight;
+    scrollToBottom();
+  }
+
+  /* ---------------- safe markdown rendering ----------------
+     Model text is never put through innerHTML. Blocks are parsed
+     (fenced code, headings, lists, blockquotes, paragraphs) and inline
+     markup (bold, italic, code, links, [S#] citations) is built as DOM
+     nodes. Anything unrecognised stays plain text. */
+  // NOTE: the regex is created fresh inside appendInline (not shared as a
+  // module-level global). appendInline recurses for **bold** / *italic*
+  // inner text, and a shared global regex would have its lastIndex reset
+  // by the recursive call, making the outer loop re-match the same token
+  // forever and hang the tab.
+  function appendInline(parent, text, sources) {
+    var re = /(\*\*[^*\n]+\*\*|\*[^*\n]+\*|`[^`]+`|\[[^\]\n]+\]\([^)\s]+\)|\[S\d+(?:\s*,\s*S\d+)*\])/g;
+    var last = 0, m;
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) parent.appendChild(document.createTextNode(text.slice(last, m.index)));
+      var tok = m[0];
+      if (tok.indexOf("**") === 0) {
+        var b = document.createElement("strong");
+        appendInline(b, tok.slice(2, -2), sources);
+        parent.appendChild(b);
+      } else if (tok.charAt(0) === "*") {
+        var em = document.createElement("em");
+        appendInline(em, tok.slice(1, -1), sources);
+        parent.appendChild(em);
+      } else if (tok.charAt(0) === "`") {
+        var code = document.createElement("code");
+        code.textContent = tok.slice(1, -1);
+        parent.appendChild(code);
+      } else if (tok.charAt(0) === "[") {
+        var lm = tok.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+        if (lm && /^https?:\/\//.test(lm[2])) {
+          var a = document.createElement("a");
+          a.href = lm[2]; a.target = "_blank"; a.rel = "noopener";
+          a.textContent = lm[1];
+          parent.appendChild(a);
+        } else {
+          var cm = tok.match(/^\[S([\d,\s]+)\]$/);
+          if (cm) {
+            var nums = cm[1].split(",").map(function (x) { return parseInt(x.trim(), 10); });
+            var made = 0;
+            nums.forEach(function (n) {
+              if (n >= 1 && n <= sources.length) {
+                if (made > 0) parent.appendChild(document.createTextNode(", "));
+                parent.appendChild(makeCiteButton(n));
+                made++;
+              }
+            });
+            if (!made) parent.appendChild(document.createTextNode(tok));
+          } else {
+            parent.appendChild(document.createTextNode(tok));
+          }
+        }
+      }
+      last = re.lastIndex;
+    }
+    if (last < text.length) parent.appendChild(document.createTextNode(text.slice(last)));
+  }
+
+  function renderMarkdown(container, text, sources) {
+    var lines = String(text).split("\n");
+    var i = 0, para = [], listKind = null, listItems = [];
+    function flushPara() {
+      if (!para.length) return;
+      var t = para.join("\n").trim();
+      para = [];
+      if (!t) return;
+      // A paragraph that opens with a quotation is a quoted passage.
+      var isQuote = t.charAt(0) === '"' && t.indexOf('"', 1) > 0;
+      var node = document.createElement(isQuote ? "blockquote" : "p");
+      if (isQuote) {
+        t = t.slice(1);
+        var lastQ = t.lastIndexOf('"');
+        if (lastQ >= 0) t = t.slice(0, lastQ) + t.slice(lastQ + 1);
+      }
+      appendInline(node, t, sources);
+      container.appendChild(node);
+    }
+    function flushList() {
+      if (!listItems.length) return;
+      var list = document.createElement(listKind);
+      listItems.forEach(function (it) {
+        var li = document.createElement("li");
+        appendInline(li, it, sources);
+        list.appendChild(li);
+      });
+      container.appendChild(list);
+      listItems = [];
+    }
+    while (i < lines.length) {
+      var line = lines[i];
+      var trimmed = line.trim();
+      if (trimmed.indexOf("```") === 0) {
+        flushPara(); flushList(); listKind = null;
+        i++;
+        var code = [];
+        while (i < lines.length && lines[i].trim().indexOf("```") !== 0) { code.push(lines[i]); i++; }
+        i++;
+        var pre = document.createElement("pre");
+        var c = document.createElement("code");
+        c.textContent = code.join("\n");
+        pre.appendChild(c);
+        container.appendChild(pre);
+        continue;
+      }
+      var hm = trimmed.match(/^(#{1,3})\s+(.+)$/);
+      if (hm) {
+        flushPara(); flushList(); listKind = null;
+        var h = document.createElement(hm[1].length === 1 ? "h3" : "h4");
+        appendInline(h, hm[2], sources);
+        container.appendChild(h);
+        i++;
+        continue;
+      }
+      if (trimmed.indexOf("> ") === 0 || trimmed === ">") {
+        flushPara(); flushList(); listKind = null;
+        var bq = document.createElement("blockquote");
+        var qlines = [];
+        while (i < lines.length && (lines[i].trim().indexOf("> ") === 0 || lines[i].trim() === ">")) {
+          qlines.push(lines[i].trim().replace(/^>\s?/, ""));
+          i++;
+        }
+        appendInline(bq, qlines.join(" "), sources);
+        container.appendChild(bq);
+        continue;
+      }
+      var um = trimmed.match(/^[-*]\s+(.+)$/);
+      if (um) {
+        flushPara();
+        if (listKind !== "ul") { flushList(); listKind = "ul"; }
+        listItems.push(um[1]);
+        i++;
+        continue;
+      }
+      var om = trimmed.match(/^\d+[.)]\s+(.+)$/);
+      if (om) {
+        flushPara();
+        if (listKind !== "ol") { flushList(); listKind = "ol"; }
+        listItems.push(om[1]);
+        i++;
+        continue;
+      }
+      if (trimmed === "") {
+        flushPara(); flushList(); listKind = null;
+        i++;
+        continue;
+      }
+      if (listKind && listItems.length) {
+        listItems[listItems.length - 1] += " " + trimmed;
+        i++;
+        continue;
+      }
+      para.push(line);
+      i++;
+    }
+    flushPara(); flushList();
+  }
+
+  function renderAnswerText(container, answer, sources) {
+    renderMarkdown(container, answer, sources);
   }
 
   /* ---------------- rendering ---------------- */
@@ -552,43 +848,6 @@
     var tip = attemptsTooltip(meta);
     if (tip) badge.title = tip;
     return badge;
-  }
-
-  function renderAnswerText(container, answer, sources) {
-    var paras = String(answer).split(/\n\s*\n/);
-    paras.forEach(function (para) {
-      para = para.trim();
-      if (!para) return;
-      // A paragraph that opens with a quotation is a quoted passage.
-      // The closing quote may sit before a trailing citation, so look
-      // for any second quote mark, not only one at the very end.
-      var isQuote = para.charAt(0) === '"' && para.indexOf('"', 1) > 0;
-      var node = document.createElement(isQuote ? "blockquote" : "p");
-      if (isQuote) {
-        para = para.slice(1);
-        var lastQ = para.lastIndexOf('"');
-        if (lastQ >= 0) para = para.slice(0, lastQ) + para.slice(lastQ + 1);
-      }
-      // Split on [S1]..[S5], including groups like [S1, S4] (the real
-      // model output uses both). Only numbers within the source range
-      // become buttons; anything else stays plain text.
-      var parts = para.split(/(\[S\d+(?:\s*,\s*S\d+)*\])/g);
-      parts.forEach(function (part) {
-        var m = part.match(/^\[S([\d,\s]+)\]$/);
-        if (!m) { node.appendChild(document.createTextNode(part)); return; }
-        var nums = m[1].split(",").map(function (x) { return parseInt(x.trim(), 10); });
-        var made = 0;
-        nums.forEach(function (n) {
-          if (n >= 1 && n <= sources.length) {
-            if (made > 0) node.appendChild(document.createTextNode(", "));
-            node.appendChild(makeCiteButton(n));
-            made++;
-          }
-        });
-        if (!made) node.appendChild(document.createTextNode(part));
-      });
-      container.appendChild(node);
-    });
   }
 
   function makeCiteButton(n) {
@@ -776,7 +1035,7 @@
 
   function showErrorBox(text, actions) {
     var wrap = document.createElement("div");
-    wrap.className = "msg asst-msg";
+    wrap.className = "msg asst-msg fresh";
     var box = document.createElement("div");
     box.className = "error-box";
     box.textContent = text;
@@ -795,7 +1054,7 @@
     }
     wrap.appendChild(box);
     el.thread.appendChild(wrap);
-    el.thread.scrollTop = el.thread.scrollHeight;
+    scrollToBottom();
   }
 
   /* ---------------- composer ---------------- */
@@ -847,12 +1106,15 @@
     if (Date.now() < state.cooldownUntil) return;
     state.inFlight = true;
     setComposerEnabled(false);
+    setConversationTitle(q);
     hideEmptyState();
     el.input.value = "";
     autogrow();
-    el.thread.appendChild(renderUserBubble(q, Date.now()));
+    var uw = renderUserBubble(q, Date.now());
+    uw.classList.add("fresh");
+    el.thread.appendChild(uw);
     var pending = document.createElement("div");
-    pending.className = "msg asst-msg";
+    pending.className = "msg asst-msg fresh";
     var prow = document.createElement("div");
     prow.className = "asst";
     var pimg = document.createElement("img");
@@ -866,26 +1128,29 @@
     who.textContent = "Lee Kuan Yew";
     var ptext = document.createElement("div");
     ptext.className = "pending";
+    var dots = document.createElement("span");
+    dots.className = "thinking";
+    dots.innerHTML = "<i></i><i></i><i></i>";
+    var plabel = document.createElement("span");
+    ptext.appendChild(dots);
+    ptext.appendChild(plabel);
     pbody.appendChild(who);
     pbody.appendChild(ptext);
     prow.appendChild(pimg);
     prow.appendChild(pbody);
     pending.appendChild(prow);
     el.thread.appendChild(pending);
-    el.thread.scrollTop = el.thread.scrollHeight;
+    scrollToBottom();
 
     var t0 = Date.now();
-    var timer = setInterval(function () {
+    var setLabel = function () {
       var n = Math.floor((Date.now() - t0) / 1000);
-      ptext.innerHTML = "";
-      var label = state.server === "live"
+      plabel.textContent = (state.server === "live"
         ? "Searching the speeches"
-        : "Waking the server (free hosting, about a minute)";
-      ptext.textContent = label + "… " + n + "s";
-    }, 1000);
-    ptext.textContent = state.server === "live"
-      ? "Searching the speeches… 0s"
-      : "Waking the server (free hosting, about a minute)… 0s";
+        : "Waking the server (free hosting, about a minute)") + "… " + n + "s";
+    };
+    var timer = setInterval(setLabel, 1000);
+    setLabel();
 
     var finish = function () {
       clearInterval(timer);
@@ -899,7 +1164,7 @@
       return fetch(API_BASE + "/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q, k: 5 }),
+        body: JSON.stringify({ question: q, k: 5, model: getModelChoice() }),
         signal: ctrl.signal,
       }).then(function (r) {
         clearTimeout(to);
@@ -910,26 +1175,35 @@
       });
     };
 
+    var handleAnswer = function (res) {
+      pending.remove();
+      if (res.status === 200) {
+        var d = res.data;
+        var aw = renderAssistant(
+          d.answer === null ? null : d.answer, d.sources || [], d.meta || {}, Date.now(), false);
+        aw.classList.add("fresh");
+        el.thread.appendChild(aw);
+        pushHistory({ question: q, answer: d.answer, sources: d.sources || [], meta: d.meta || {}, ts: Date.now() });
+        scrollToBottom();
+        finish();
+        return true;
+      }
+      return false;
+    };
+
     ensureAwake().then(function (awake) {
       if (!awake) {
         pending.remove();
         finish();
         showErrorBox("Couldn't reach the server. It may still be waking up.", [
           { label: "Try again", primary: true, fn: function () { send(q); } },
-          { label: "See examples", fn: function () { setTab("examples"); } },
+          { label: "See examples", fn: function () { setView("examples"); } },
         ]);
         return;
       }
       return doPost().then(function (res) {
-        pending.remove();
-        if (res.status === 200) {
-          var d = res.data;
-          el.thread.appendChild(renderAssistant(
-            d.answer === null ? null : d.answer, d.sources || [], d.meta || {}, Date.now(), false));
-          pushHistory({ question: q, answer: d.answer, sources: d.sources || [], meta: d.meta || {}, ts: Date.now() });
-          el.thread.scrollTop = el.thread.scrollHeight;
-          finish();
-        } else if (res.status === 429) {
+        if (handleAnswer(res)) return;
+        if (res.status === 429) {
           var ra = (res.data.detail && res.data.detail.retry_after) || 60;
           finish();
           showErrorBox("You're asking quickly. Please try again in " + ra + " s.");
@@ -947,7 +1221,7 @@
           finish();
           showErrorBox("The request timed out. The server may still be waking up.", [
             { label: "Try again", primary: true, fn: function () { send(q); } },
-            { label: "See examples", fn: function () { setTab("examples"); } },
+            { label: "See examples", fn: function () { setView("examples"); } },
           ]);
           return;
         }
@@ -959,19 +1233,12 @@
             finish();
             showErrorBox("Couldn't reach the server. It may still be waking up.", [
               { label: "Try again", primary: true, fn: function () { send(q); } },
-              { label: "See examples", fn: function () { setTab("examples"); } },
+              { label: "See examples", fn: function () { setView("examples"); } },
             ]);
             return;
           }
           return doPost().then(function (res) {
-            pending.remove();
-            if (res.status === 200) {
-              var d = res.data;
-              el.thread.appendChild(renderAssistant(
-                d.answer === null ? null : d.answer, d.sources || [], d.meta || {}, Date.now(), false));
-              pushHistory({ question: q, answer: d.answer, sources: d.sources || [], meta: d.meta || {}, ts: Date.now() });
-              el.thread.scrollTop = el.thread.scrollHeight;
-            } else {
+            if (!handleAnswer(res)) {
               showErrorBox("Something went wrong on the server. Please try again.");
             }
             finish();
@@ -980,7 +1247,7 @@
             finish();
             showErrorBox("Couldn't reach the server. It may still be waking up.", [
               { label: "Try again", primary: true, fn: function () { send(q); } },
-              { label: "See examples", fn: function () { setTab("examples"); } },
+              { label: "See examples", fn: function () { setView("examples"); } },
             ]);
           });
         });
@@ -1000,14 +1267,22 @@
     }
   });
   el["new-chat"].addEventListener("click", clearHistory);
+  el["new-chat-side"].addEventListener("click", function () { setView("chat"); clearHistory(); });
   el["clear-history"].addEventListener("click", clearHistory);
+  el["clear-history-side"].addEventListener("click", clearHistory);
   if (TTS_SUPPORTED) el["tts-stop"].addEventListener("click", stopSpeech);
 
   /* ---------------- init ---------------- */
   renderTry();
-  restoreHistory();
-  var hash = (location.hash || "#chat").slice(1);
-  setTab(hash);
+  var shared = loadShared();
+  if (!shared) {
+    restoreHistory();
+    var hash = (location.hash || "#chat").slice(1);
+    setView(hash);
+  } else {
+    setView("chat");
+    updateTopTitle();
+  }
   loadCorpus();
   loadExamples();
   pingHealth();
