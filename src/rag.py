@@ -1,18 +1,20 @@
 """LKY chatbot: hybrid retrieval (dense bge-small-en-v1.5 + BM25, fused by RRF)
-+ generation via OpenRouter (free DeepSeek). No database: embeddings live in
-a .npy file; BM25 runs in pure Python over the same 75 chunks.
++ generation via the llm fallback chain (src/llm.py). No database: embeddings
+live in a .npy file; BM25 runs in pure Python over the same chunks.
 Same hybrid design as the NusaNara thesis system (dense + lexical, RRF).
 
 Usage:
   python src/rag.py "your question" [--k 5] [--retrieve-only]
   OPENROUTER_API_KEY=... OPENROUTER_MODEL=... python src/rag.py "your question"
-Env: OPENROUTER_API_KEY (required for generation, even for :free models),
+Env: OPENROUTER_API_KEY (required for the free tier, even for :free models),
      OPENROUTER_MODEL (default google/gemma-4-26b-a4b-it:free — verified free
      on 2026-11-06 22:23 WIB via the public /models list; the free list
      rotates, so re-confirm before a run. There is NO free DeepSeek model on
      OpenRouter right now: the cheapest DeepSeek (deepseek-v4-flash) costs
      ~$0.0002 per answer, so a $1 credit would cover thousands of answers,
      but the zero-budget path uses a :free model. Never guess a model ID.)
+     See src/llm.py for the full fallback chain (OpenRouter free -> Vikey
+     deepseek-v4-pro -> Vikey deepseek-v4-flash) and its env vars.
 Proxy note: run with NO_PROXY=localhost,127.0.0.1 no_proxy=localhost,127.0.0.1
 (see TOOLS.md) or httpx crashes on the bracketed-IPv6 NO_PROXY entries.
 """
@@ -28,11 +30,16 @@ BASE = os.path.expanduser("~/workspace/aic-section1/lky-chatbot")
 SYSTEM_PROMPT = open(os.path.join(BASE, "prompts/system.md"), encoding="utf-8").read()
 
 _model = None
+def _model_cache_dir():
+    return os.environ.get(
+        "MODEL_CACHE_DIR", os.path.join(BASE, ".cache", "fastembed"))
+
 def get_model():
     global _model
     if _model is None:
         from fastembed import TextEmbedding
-        _model = TextEmbedding("BAAI/bge-small-en-v1.5")
+        _model = TextEmbedding("BAAI/bge-small-en-v1.5",
+                               cache_dir=_model_cache_dir())
     return _model
 
 def load_index():
@@ -103,25 +110,30 @@ def build_context(chunks):
         parts.append(f"--- Source: {tag} ---\n{c['text']}")
     return "\n\n".join(parts)
 
-def generate(query: str, chunks, model: str | None = None):
-    import httpx
-    key = os.environ.get("OPENROUTER_API_KEY")
-    if not key:
-        raise RuntimeError("OPENROUTER_API_KEY is not set (put it in .env, never in the repo)")
-    model = model or os.environ.get("OPENROUTER_MODEL", "google/gemma-4-26b-a4b-it:free")
-    user = (f"Retrieved passages from Lee Kuan Yew's speeches:\n\n{build_context(chunks)}\n\n"
-            f"Question: {query}\n\nAnswer as Lee Kuan Yew would, using ONLY the passages above. "
-            f"Cite each claim with the speech title and date.")
-    r = httpx.post("https://openrouter.ai/api/v1/chat/completions",
-                   headers={"Authorization": f"Bearer {key}",
-                            "HTTP-Referer": "https://github.com/mirzasnowy/lky-chatbot",
-                            "X-Title": "LKY chatbot (99 Group AI Challenge, Section 3)"},
-                   json={"model": model, "temperature": 0.3,
-                         "messages": [{"role": "system", "content": SYSTEM_PROMPT},
-                                      {"role": "user", "content": user}]},
-                   timeout=120)
-    r.raise_for_status()
-    return r.json()["choices"][0]["message"]["content"]
+def build_messages(query: str, chunks):
+    """System prompt + retrieved passages labelled [S1]..[S5] + question.
+    The labels let the UI turn citations into clickable source cards."""
+    parts = []
+    for i, c in enumerate(chunks, 1):
+        tag = c["title"] + f" ({c['date']}, {c['source']})"
+        if c.get("is_translation"):
+            tag += " [English translation; not his delivered English wording]"
+        if c.get("is_draft"):
+            tag += " [NAS labels this a draft]"
+        if c.get("is_qa"):
+            tag += " [press-conference Q&A transcript]"
+        if c.get("is_letter"):
+            tag += " [letter to newspapers, not a speech]"
+        if c.get("is_toast"):
+            tag += " [short dinner toast/reply, not a full speech]"
+        if c.get("is_partial_malay"):
+            tag += " [delivered partly in Malay; this is the English transcript]"
+        parts.append(f"[S{i}] {tag}\n{c['text']}")
+    user = ("Retrieved passages from Lee Kuan Yew's speeches:\n\n"
+            + "\n\n".join(parts)
+            + f"\n\nQUESTION\n{query}")
+    return [{"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user}]
 
 def main():
     ap = argparse.ArgumentParser()
@@ -139,7 +151,18 @@ def main():
             print(c["text"][:600])
         return
     print("\n== answer ==\n")
-    print(generate(args.question, chunks))
+    try:
+        from . import llm as _llm
+    except ImportError:
+        import llm as _llm
+    result = _llm.generate(build_messages(args.question, chunks))
+    if result["ok"]:
+        print(result["answer"])
+        print(f"\n-- via {result['provider']} / {result['model']} "
+              f"(fallback: {result['fallback_used']}) --")
+    else:
+        print("generation unavailable:",
+              [a.get("error") for a in result["attempts"]])
 
 if __name__ == "__main__":
     main()
