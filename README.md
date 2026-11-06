@@ -45,11 +45,16 @@ Honest limits, stated upfront:
    twice), fused by Reciprocal Rank Fusion (k=60), top-5 chunks. The same
    hybrid design as my thesis system NusaNara (dense + lexical, RRF).
 4. **Generation**: the top-5 passages plus a strict system prompt
-   (`prompts/system.md`) go to an OpenRouter model. Default:
-   `google/gemma-4-26b-a4b-it:free` — verified free on 2026-11-06. There is
-   currently NO free DeepSeek model on OpenRouter; the cheapest DeepSeek
-   costs ~$0.0002 per answer. The model is an env var (`OPENROUTER_MODEL`),
-   re-confirm the free list before a run.
+   (`prompts/system.md`) go to a model over an OpenAI-compatible API. The
+   fallback chain is: free OpenRouter `google/gemma-4-26b-a4b-it:free` →
+   Vikey `openai/gpt-6-luna` (≈ Rp 4/answer) → Vikey
+   `deepseek/deepseek-v4-flash` (≈ Rp 5/answer). The chain moves on
+   automatically on error, timeout, or rate limit, with a per-tier cooldown.
+   The reader can also pick a model directly in the UI (Auto, Gemma 4 26B
+   Free, GPT-6 Luna, DeepSeek V4 Flash, DeepSeek V4 Pro); DeepSeek V4 Pro
+   is picker-only, not in the Auto chain, because it costs ≈ Rp 10/answer
+   and takes ~29 seconds. Free models are rate-limited and the free list
+   rotates, so the free model id is an env var (`OPENROUTER_MODEL`).
 
 ## Retrieval evaluation (`eval/`)
 
@@ -100,10 +105,34 @@ python eval/run_eval.py
 
 ## Example chats
 
-`examples/` holds real transcripts produced by running this system
-(question, retrieved chunks, model answer). Nothing in there is invented:
-each file records the model, the retrieval scores and the sources cited.
-The static demo page (`web/index.html`) renders them.
+`web/chats.json` and `docs/EXAMPLES.md` hold real transcripts produced by
+running this system (question, retrieved chunks, model answer). Nothing in
+there is invented: each entry records the model, the retrieval scores and
+the sources cited. The static demo page (`web/index.html`) renders them.
+
+## Web UI
+
+The demo at https://lky-chatbot.pages.dev is a static page (Cloudflare
+Pages) talking to the FastAPI backend on Render. One sidebar (Chat,
+Examples, Corpus, About), a centered chat column, and a model picker in the
+top bar. Each answer shows its sources; every source card shows the actual
+passage text (from `web/chunks.json`, a static lookup of the 142 passages,
+because the API returns chunk IDs rather than passage text), where the
+passage sits in its speech ("Part X of Y"), and the question's keywords
+highlighted. Citations [S1]–[S5] jump to the matching source card. Answers
+can be read aloud (per-message Listen button, never automatic), shared as a
+link (read-only view; links up to 8,000 characters, longer conversations
+fall back to copying the conversation as text), and rendered as light
+markdown through a safe renderer that escapes HTML first.
+
+## Hosting and safeguards
+
+FastAPI on Render's free tier (512 MB; model + retrieval measured at
+~266 MB) and a static page on Cloudflare Pages. Safeguards: input length
+limit (3–500 chars), per-IP rate limit (20 requests / 10 min), a daily cap
+on paid calls (300/day), no API keys in the repo, page, or logs (server env
+vars only). The page wakes the sleeping backend on load and shows its
+status; the example conversations stay visible while it sleeps.
 
 ## What went wrong
 
@@ -121,6 +150,15 @@ The static demo page (`web/index.html`) renders them.
 - No free DeepSeek model exists on OpenRouter right now (verified
   2026-11-06 via the public /models list). The design switched to the free
   Gemma 4 26B model; the model id is an env var.
+- Retrieval scores looked suspiciously small (0.03) until I checked the
+  math: RRF scores are rank-based with a 0.033 maximum, so 0.0325 is
+  near-perfect, not a bad match. The score measures ranking, not absolute
+  relevance.
+- Share fell back to copying the conversation as text for long chats, and
+  pasting that text into a desktop address bar made the browser read the
+  leading "Q:" as a Windows drive letter (file:///Q:/...). Fixed by raising
+  the link limit to 8,000 characters and making the text fallback
+  unmistakable.
 
 ## What I would change
 
