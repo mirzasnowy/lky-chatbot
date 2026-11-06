@@ -1,0 +1,123 @@
+{
+ "total_chunks": 75,
+ "total_words": 35764,
+ "speeches": [
+  {
+   "speech_id": "01",
+   "title": "Opening address, seminar on 'Education and Nation-Building'",
+   "date": "1966-12-27",
+   "raw_words": 6240,
+   "clean_words": 6221,
+   "dropped_lines": 19,
+   "n_chunks": 15
+  },
+  {
+   "speech_id": "02",
+   "title": "Transcript of press conference at Broadcasting House",
+   "date": "1965-08-09",
+   "raw_words": 6799,
+   "clean_words": 6775,
+   "dropped_lines": 24,
+   "n_chunks": 16
+  },
+  {
+   "speech_id": "03",
+   "title": "Address to the American Society of Newspaper Editors",
+   "date": "1988-04-14",
+   "raw_words": 3771,
+   "clean_words": 3734,
+   "dropped_lines": 9,
+   "n_chunks": 9
+  },
+  {
+   "speech_id": "04",
+   "title": "Speech at NTU International Conference on National Boundaries and Cultural Configurations",
+   "date": "2004-06-23",
+   "raw_words": 2507,
+   "clean_words": 2465,
+   "dropped_lines": 3,
+   "n_chunks": 6
+  },
+  {
+   "speech_id": "05",
+   "title": "Speech to NUS/NTU/SMU students, Nanyang Auditorium",
+   "date": "2003-02-18",
+   "raw_words": 2600,
+   "clean_words": 2594,
+   "dropped_lines": 2,
+   "n_chunks": 6
+  },
+  {
+   "speech_id": "06",
+   "title": "Speech at Standard Chartered 150th Anniversary Charity Gala Dinner",
+   "date": "2003-04-25",
+   "raw_words": 1996,
+   "clean_words": 1955,
+   "dropped_lines": 8,
+   "n_chunks": 5
+  },
+  {
+   "speech_id": "07",
+   "title": "Speech at SCCCI Millennium Celebration Dinner",
+   "date": "1999-12-28",
+   "raw_words": 1033,
+   "clean_words": 1015,
+   "dropped_lines": 5,
+   "n_chunks": 3
+  },
+  {
+   "speech_id": "08",
+   "title": "Speech at SPH Integration Seminar",
+   "date": "2009-04-12",
+   "raw_words": 1286,
+   "clean_words": 1281,
+   "dropped_lines": 3,
+   "n_chunks": 3
+  },
+  {
+   "speech_id": "09",
+   "title": "Speech at Tanjong Pagar 44th National Day Celebration Dinner",
+   "date": "2009-08-13",
+   "raw_words": 1270,
+   "clean_words": 1268,
+   "dropped_lines": 1,
+   "n_chunks": 3
+  },
+  {
+   "speech_id": "10",
+   "title": "Speech at NTUC 50th Anniversary Dinner, Marina Bay Sands",
+   "date": "2011-05-13",
+   "raw_words": 1757,
+   "clean_words": 1741,
+   "dropped_lines": 7,
+   "n_chunks": 4
+  },
+  {
+   "speech_id": "11",
+   "title": "Speech at state dinner for Australian PM William McMahon",
+   "date": "1972-06-09",
+   "raw_words": 794,
+   "clean_words": 794,
+   "dropped_lines": 0,
+   "n_chunks": 2
+  },
+  {
+   "speech_id": "12",
+   "title": "Translation of speech at National Day Celebration Dinner, Geylang Serai",
+   "date": "1966-08-25",
+   "raw_words": 543,
+   "clean_words": 543,
+   "dropped_lines": 0,
+   "n_chunks": 2
+  },
+  {
+   "speech_id": "13",
+   "title": "Speech at dinner in honour of National Servicemen, Tanjong Pagar Community Centre",
+   "date": "1968-09-15",
+   "raw_words": 418,
+   "clean_words": 418,
+   "dropped_lines": 0,
+   "n_chunks": 1
+  }
+ ]
+}
