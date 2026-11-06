@@ -1,6 +1,6 @@
 {
- "total_chunks": 75,
- "total_words": 35764,
+ "total_chunks": 127,
+ "total_words": 59351,
  "speeches": [
   {
    "speech_id": "01",
@@ -25,8 +25,8 @@
    "title": "Address to the American Society of Newspaper Editors",
    "date": "1988-04-14",
    "raw_words": 3771,
-   "clean_words": 3734,
-   "dropped_lines": 9,
+   "clean_words": 3669,
+   "dropped_lines": 2,
    "n_chunks": 9
   },
   {
@@ -52,9 +52,9 @@
    "title": "Speech at Standard Chartered 150th Anniversary Charity Gala Dinner",
    "date": "2003-04-25",
    "raw_words": 1996,
-   "clean_words": 1955,
-   "dropped_lines": 8,
-   "n_chunks": 5
+   "clean_words": 1536,
+   "dropped_lines": 0,
+   "n_chunks": 4
   },
   {
    "speech_id": "07",
@@ -118,6 +118,132 @@
    "clean_words": 418,
    "dropped_lines": 0,
    "n_chunks": 1
+  },
+  {
+   "speech_id": "14",
+   "title": "Speech on responsibilities of teachers, Education Ministry rally of teachers",
+   "date": "1959-12-08",
+   "raw_words": 1405,
+   "clean_words": 1405,
+   "dropped_lines": 0,
+   "n_chunks": 4
+  },
+  {
+   "speech_id": "15",
+   "title": "Speech at 5th Asian-Pacific Congress of Cardiology delegates dinner",
+   "date": "1972-10-13",
+   "raw_words": 1682,
+   "clean_words": 1682,
+   "dropped_lines": 0,
+   "n_chunks": 4
+  },
+  {
+   "speech_id": "16",
+   "title": "Address at Malay Teachers' Union Seminar, 'Facing Educational Challenges in the 1980s'",
+   "date": "1978-05-31",
+   "raw_words": 1965,
+   "clean_words": 1964,
+   "dropped_lines": 1,
+   "n_chunks": 5
+  },
+  {
+   "speech_id": "17",
+   "title": "Speech at opening of Singapore Polytechnic new campus, Dover Road",
+   "date": "1979-07-07",
+   "raw_words": 1541,
+   "clean_words": 1312,
+   "dropped_lines": 0,
+   "n_chunks": 3
+  },
+  {
+   "speech_id": "18",
+   "title": "Letter to all newspapers on recruiting native English-speaking teachers",
+   "date": "1980-03-26",
+   "raw_words": 1193,
+   "clean_words": 1190,
+   "dropped_lines": 1,
+   "n_chunks": 3
+  },
+  {
+   "speech_id": "19",
+   "title": "Speech at launching ceremony of the Speak Mandarin Campaign",
+   "date": "1989-10-03",
+   "raw_words": 1340,
+   "clean_words": 506,
+   "dropped_lines": 1,
+   "n_chunks": 2
+  },
+  {
+   "speech_id": "20",
+   "title": "Speech at SAFTI Military Institute ground-breaking ceremony",
+   "date": "1990-06-09",
+   "raw_words": 862,
+   "clean_words": 861,
+   "dropped_lines": 1,
+   "n_chunks": 2
+  },
+  {
+   "speech_id": "21",
+   "title": "Speech at People's Association 30th Anniversary Concert",
+   "date": "1990-06-30",
+   "raw_words": 580,
+   "clean_words": 580,
+   "dropped_lines": 0,
+   "n_chunks": 2
+  },
+  {
+   "speech_id": "22",
+   "title": "Speech at Raffles Institution fund-raising dinner",
+   "date": "1990-07-17",
+   "raw_words": 1307,
+   "clean_words": 1306,
+   "dropped_lines": 1,
+   "n_chunks": 3
+  },
+  {
+   "speech_id": "23",
+   "title": "Speech at dinner for the Establishment, Westin Hotel",
+   "date": "1990-08-29",
+   "raw_words": 1189,
+   "clean_words": 1188,
+   "dropped_lines": 1,
+   "n_chunks": 3
+  },
+  {
+   "speech_id": "24",
+   "title": "Speech at Prophet Muhammad's Birthday Memorial Scholarship Fund Board bursary awards",
+   "date": "1990-10-06",
+   "raw_words": 319,
+   "clean_words": 318,
+   "dropped_lines": 1,
+   "n_chunks": 1
+  },
+  {
+   "speech_id": "25",
+   "title": "Speech at the Pacific Rim Forum, Hong Kong",
+   "date": "1997-06-27",
+   "raw_words": 2494,
+   "clean_words": 2472,
+   "dropped_lines": 2,
+   "n_chunks": 6
+  },
+  {
+   "speech_id": "26",
+   "title": "Speech at parliamentary debate on the Chinese Language Curriculum and Pedagogy Review Committee",
+   "date": "2004-11-25",
+   "raw_words": 5028,
+   "clean_words": 4982,
+   "dropped_lines": 3,
+   "n_chunks": 12
+  },
+  {
+   "speech_id": "27",
+   "title": "Speech at Speak Mandarin Campaign 30th Anniversary launch, NTUC Auditorium",
+   "date": "2009-03-17",
+   "raw_words": 1267,
+   "clean_words": 1265,
+   "dropped_lines": 1,
+   "n_chunks": 3
   }
  ]
 }
