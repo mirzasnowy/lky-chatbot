@@ -3,52 +3,108 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>What Would Lee Kuan Yew Do? — a RAG chatbot</title>
-<style>
-  body { font-family: Georgia, serif; max-width: 720px; margin: 0 auto; padding: 24px 16px; color: #1a1a1a; line-height: 1.6; }
-  h1 { font-size: 1.6em; margin-bottom: 0.2em; }
-  .sub { color: #555; margin-top: 0; }
-  .chat { border: 1px solid #ddd; border-radius: 10px; padding: 16px; margin: 20px 0; }
-  .q { font-weight: bold; }
-  .a { white-space: pre-wrap; }
-  .sources { font-size: 0.85em; color: #555; margin-top: 12px; }
-  .sources a { color: #555; }
-  .meta { font-size: 0.85em; color: #777; }
-  .empty { border: 1px dashed #aaa; border-radius: 10px; padding: 16px; color: #555; }
-  a { color: #1a5fb4; }
-</style>
+<title>What Would Lee Kuan Yew Do? — Digital Archive</title>
+<meta name="description" content="A retrieval-augmented chatbot that answers in Lee Kuan Yew's voice, grounded only in 33 of his public speeches (1959–2011).">
+<link rel="stylesheet" href="./style.css">
 </head>
 <body>
-<h1>What Would Lee Kuan Yew Do?</h1>
-<p class="sub">A chatbot that answers in Lee Kuan Yew's voice, grounded only in his own
-public speeches (13 speeches, 1965–2011, ~31,000 words). Every answer cites
-the speech it comes from. If a question is not covered by the speeches, it
-says so instead of inventing an answer.</p>
-<p class="meta">Built for Section 3 of the 99 Group AI Aptitude Challenge.
-Code, corpus, prompts and evaluation:
-<a href="https://github.com/mirzasnowy/lky-chatbot">github.com/mirzasnowy/lky-chatbot</a></p>
-<div id="chats"><p>Loading example chats…</p></div>
-<script>
-fetch('./chats.json').then(r => r.json()).then(d => {
-  const el = document.getElementById('chats');
-  if (!d.chats || d.chats.length === 0) {
-    el.innerHTML = '<div class="empty">No example chats generated yet. '
-      + 'Example chats are produced by running the real system (retrieval + '
-      + 'generation) and are added here with their sources — nothing is invented.</div>';
-    return;
-  }
-  el.innerHTML = '<p class="meta">Generated ' + (d.generated_at || '')
-    + ' with model ' + (d.model || '') + '.</p>'
-    + d.chats.map(c =>
-      '<div class="chat"><p class="q">Q: ' + c.question + '</p>'
-      + '<p class="a">' + c.answer + '</p>'
-      + '<p class="sources">Sources: ' + c.sources.map(s =>
-        '<a href="' + s.url + '">' + s.title + ' (' + s.date + ')</a>').join('; ')
-      + '</p></div>').join('');
-}).catch(() => {
-  document.getElementById('chats').innerHTML =
-    '<div class="empty">Could not load example chats.</div>';
-});
-</script>
+<div class="layout">
+
+  <!-- ============ LEFT SIDEBAR ============ -->
+  <aside class="sidebar" aria-label="About this archive">
+    <div class="brand">
+      <span class="brand-bar" aria-hidden="true"></span>
+      <div>
+        <h1>LEE KUAN YEW</h1>
+        <p class="brand-sub">D I G I T A L &nbsp; A R C H I V E</p>
+      </div>
+      <p class="brand-tag">His words.<br>Our questions.<br>A more informed tomorrow.</p>
+    </div>
+
+    <figure class="portrait">
+      <img src="./assets/portrait.jpg" alt="Black-and-white portrait of Lee Kuan Yew, seated, 1982" width="865" height="1342">
+      <figcaption>
+        <img class="signature" src="./assets/signature.svg" alt="Lee Kuan Yew's signature" width="172" height="110">
+      </figcaption>
+    </figure>
+
+    <nav class="sidenav" aria-label="Sections">
+      <button type="button" data-tab="chat" class="active"><span class="nav-ic" aria-hidden="true">&#9998;</span> Chat</button>
+      <button type="button" data-tab="corpus"><span class="nav-ic" aria-hidden="true">&#9776;</span> Corpus</button>
+      <button type="button" data-tab="about"><span class="nav-ic" aria-hidden="true">&#9432;</span> About</button>
+    </nav>
+
+    <section class="try" aria-label="Try these questions">
+      <h2>TRY THESE QUESTIONS</h2>
+      <div id="try-list" class="try-list"></div>
+    </section>
+
+    <figure class="skyline">
+      <img src="./assets/skyline.jpg" alt="Singapore skyline across Marina Bay at night" width="960" height="640" loading="lazy">
+      <blockquote>
+        <p>&ldquo;The survival of Singapore depends on our ability to adapt, to change, and to remain united.&rdquo;</p>
+        <footer>&mdash; LEE KUAN YEW</footer>
+      </blockquote>
+    </figure>
+  </aside>
+
+  <!-- ============ CENTER: CHAT ============ -->
+  <main class="center">
+    <div class="topbar">
+      <span class="mobile-brand">LEE KUAN YEW &middot; DIGITAL ARCHIVE</span>
+      <div class="live-pill" id="live-pill"><span class="dot" aria-hidden="true"></span><span>Live mode &middot; Powered by RAG &middot; <span id="pill-stats">33 speeches</span></span></div>
+      <div class="top-right">
+        <span class="model-badge" id="model-badge" title="Answers use the free model first. If it is unavailable, a low-cost backup model answers instead.">&#10022; Free model</span>
+        <span class="status-pill" id="status-pill" hidden></span>
+      </div>
+    </div>
+
+    <div class="banner" id="banner" hidden></div>
+
+    <section class="thread" id="thread" aria-live="polite">
+      <div class="empty-state" id="empty-state">
+        <p>Ask about leadership, Singapore&rsquo;s separation from Malaysia, China and the United States, education, the economy. Answers come only from his speeches and cite them. Each question is answered on its own (no memory of earlier turns). Please ask in English.</p>
+        <div class="chips" id="chips"></div>
+        <p class="empty-note">Chat history is saved only in this browser, never on the server. <button type="button" id="clear-history" class="linklike">Clear history</button></p>
+      </div>
+    </section>
+
+    <form class="composer" id="composer" autocomplete="off">
+      <button type="button" class="icon-btn" id="new-chat" title="Clear the chat and start over" aria-label="Start a new chat">&#8635;</button>
+      <label class="sr-only" for="input">Your question</label>
+      <textarea id="input" rows="1" maxlength="500" placeholder="Ask something about Lee Kuan Yew&hellip;"></textarea>
+      <span class="counter" id="counter" hidden></span>
+      <button type="submit" class="send" id="send" aria-label="Send question">&#10148;</button>
+    </form>
+  </main>
+
+  <!-- ============ RIGHT PANEL ============ -->
+  <aside class="panel" id="panel" aria-label="Corpus and examples">
+    <div class="tabs" role="tablist" aria-label="Panel tabs">
+      <button type="button" role="tab" data-tab="chat" class="active" aria-selected="true">Chat</button>
+      <button type="button" role="tab" data-tab="examples" aria-selected="false">Examples</button>
+      <button type="button" role="tab" data-tab="corpus" aria-selected="false">Corpus</button>
+      <button type="button" role="tab" data-tab="about" aria-selected="false">About</button>
+    </div>
+    <div class="panel-body">
+      <section class="tab-page" id="tab-chat" role="tabpanel" aria-label="Corpus overview"></section>
+      <section class="tab-page" id="tab-examples" role="tabpanel" aria-label="Example conversations" hidden></section>
+      <section class="tab-page" id="tab-corpus" role="tabpanel" aria-label="All speeches" hidden></section>
+      <section class="tab-page" id="tab-about" role="tabpanel" aria-label="About the corpus" hidden></section>
+    </div>
+    <footer class="panel-foot">
+      This is an AI chatbot, not Lee Kuan Yew. Answers are generated from 33 of his public speeches (1959&ndash;2011) and can be incomplete or wrong.
+      <a href="https://github.com/mirzasnowy/lky-chatbot" target="_blank" rel="noopener">Source code</a> &middot;
+      <a href="./assets/SOURCES.md" target="_blank" rel="noopener">Photo credits</a>
+    </footer>
+  </aside>
+</div>
+
+<noscript>
+  <p style="max-width:640px;margin:2em auto;padding:1em;font-family:sans-serif">This page needs JavaScript for the live chat. Real example conversations are in <a href="https://github.com/mirzasnowy/lky-chatbot/blob/main/docs/EXAMPLES.md">docs/EXAMPLES.md</a> in the repo.</p>
+</noscript>
+
+<script src="./config.js"></script>
+<script src="./app.js"></script>
 </body>
 </html>
