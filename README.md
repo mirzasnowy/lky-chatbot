@@ -6,11 +6,11 @@ Built by Muhammad Mirza Kurniawan (mirzasnowy) for the challenge; the code,
 prompts, corpus list and evaluation are all in this repo so the evaluator
 can open everything.
 
-## Corpus — 33 public speeches, 59,305 words (measured)
+## Corpus — 33 public speeches, 59,362 words (measured)
 
 Full texts from the National Archives of Singapore (NAS), the Prime Minister's
 Office Singapore (PMO), NTUC, and Australian PM Transcripts. 1959-2011.
-Decades: 1950s ×1, 1960s ×4, 1970s ×4, 1980s ×3, 1990s ×13, 2000s ×8.
+Decades: 1950s ×1, 1960s ×4, 1970s ×4, 1980s ×3, 1990s ×13, 2000s ×7, 2010s ×1.
 Every chunk carries title, date, source and URL; see `corpus/corpus.json`.
 
 Honest limits, stated upfront:
