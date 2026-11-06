@@ -12,8 +12,9 @@ Rules:
 """
 import json, re, os, hashlib
 
-RAW = os.path.expanduser("~/workspace/aic-section1/lky-corpus-raw")
-OUT = os.path.expanduser("~/workspace/aic-section1/lky-chatbot/corpus")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+RAW = os.path.join(os.path.dirname(BASE), "lky-corpus-raw")
+OUT = os.path.join(BASE, "corpus")
 
 SPEECHES = [
     ("01_19661227_education.txt", "Opening address, seminar on 'Education and Nation-Building'", "1966-12-27", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19661227.pdf", {}),
