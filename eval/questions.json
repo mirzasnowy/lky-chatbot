@@ -1,14 +1,95 @@
 [
-  {"q": "What did Lee Kuan Yew say about education and nation-building?", "expect": ["01"]},
-  {"q": "How should Singapore handle immigration and new citizens?", "expect": ["08", "09"]},
-  {"q": "What is his view on China and bilingualism?", "expect": ["04"]},
-  {"q": "How did Singapore manage the SARS crisis?", "expect": ["06"]},
-  {"q": "What did he say to young people about the future?", "expect": ["05"]},
-  {"q": "What was his view on the press and government?", "expect": ["03"]},
-  {"q": "Why did Singapore introduce National Service?", "expect": ["13"]},
-  {"q": "What did he say about the labour movement and tripartism?", "expect": ["10"]},
-  {"q": "What happened when Singapore separated from Malaysia in 1965?", "expect": ["02"]},
-  {"q": "What was his economic outlook at the turn of the millennium?", "expect": ["07"]},
-  {"q": "What did he say about ageing and low fertility?", "expect": ["09"]},
-  {"q": "What did he say about multiracialism and equal opportunity?", "expect": ["12"]}
+ {
+  "q": "What did Lee Kuan Yew say about education and nation-building?",
+  "expect": [
+   "01"
+  ]
+ },
+ {
+  "q": "How should Singapore handle immigration and new citizens?",
+  "expect": [
+   "08",
+   "09"
+  ]
+ },
+ {
+  "q": "What is his view on China and bilingualism?",
+  "expect": [
+   "04",
+   "16",
+   "26"
+  ]
+ },
+ {
+  "q": "How did Singapore manage the SARS crisis?",
+  "expect": [
+   "06"
+  ]
+ },
+ {
+  "q": "What did he say to young people about the future?",
+  "expect": [
+   "05"
+  ]
+ },
+ {
+  "q": "What was his view on the press and government?",
+  "expect": [
+   "03"
+  ]
+ },
+ {
+  "q": "Why did Singapore introduce National Service?",
+  "expect": [
+   "13"
+  ]
+ },
+ {
+  "q": "What did he say about the labour movement and tripartism?",
+  "expect": [
+   "10"
+  ]
+ },
+ {
+  "q": "What happened when Singapore separated from Malaysia in 1965?",
+  "expect": [
+   "02"
+  ]
+ },
+ {
+  "q": "What was his economic outlook at the turn of the millennium?",
+  "expect": [
+   "07"
+  ]
+ },
+ {
+  "q": "What did he say about ageing and low fertility?",
+  "expect": [
+   "09"
+  ]
+ },
+ {
+  "q": "What did he say about multiracialism and equal opportunity?",
+  "expect": [
+   "12"
+  ]
+ },
+ {
+  "q": "What did Lee Kuan Yew say about death, ageing and the right to die?",
+  "expect": [
+   "15"
+  ]
+ },
+ {
+  "q": "What was his view on the Hong Kong handover and US-China relations?",
+  "expect": [
+   "25"
+  ]
+ },
+ {
+  "q": "What did he say about his own experience learning languages?",
+  "expect": [
+   "26"
+  ]
+ }
 ]
