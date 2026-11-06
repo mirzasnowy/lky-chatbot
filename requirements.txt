@@ -1,0 +1,6 @@
+fastembed
+numpy
+fastapi
+uvicorn
+httpx
+python-dotenv
