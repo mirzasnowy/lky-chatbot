@@ -55,6 +55,7 @@
       <div class="live-pill" id="live-pill"><span class="dot" aria-hidden="true"></span><span>Live mode &middot; Powered by RAG &middot; <span id="pill-stats">33 speeches</span></span></div>
       <div class="top-right">
         <span class="model-badge" id="model-badge" title="Answers use the free model first. If it is unavailable, a low-cost backup model answers instead.">&#10022; Free model</span>
+        <button type="button" class="tts-stop" id="tts-stop" hidden title="Stop reading aloud" aria-label="Stop reading aloud">&#9632; Stop reading</button>
         <span class="status-pill" id="status-pill" hidden></span>
       </div>
     </div>
@@ -99,6 +100,11 @@
     </footer>
   </aside>
 </div>
+
+<!-- Panel rails: one slim handle per side. It sits on the panel edge and
+     slides with it; click to collapse, click again to reopen. -->
+<button type="button" id="rail-left" class="rail-btn" aria-label="Hide sidebar" title="Hide sidebar">&#8249;</button>
+<button type="button" id="rail-right" class="rail-btn" aria-label="Hide panel" title="Hide panel">&#8250;</button>
 
 <noscript>
   <p style="max-width:640px;margin:2em auto;padding:1em;font-family:sans-serif">This page needs JavaScript for the live chat. Real example conversations are in <a href="https://github.com/mirzasnowy/lky-chatbot/blob/main/docs/EXAMPLES.md">docs/EXAMPLES.md</a> in the repo.</p>
