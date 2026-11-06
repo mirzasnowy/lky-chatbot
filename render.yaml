@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: lky-chatbot
+    runtime: python
+    plan: free
+    region: singapore          # if rejected for the free plan, use oregon
+    buildCommand: pip install -r requirements.txt && python scripts/warmup.py
+    startCommand: uvicorn src.app:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.3"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: google/gemma-4-26b-a4b-it:free   # switch to a free DeepSeek ONLY if one is listed at build time
+      - key: VIKEY_API_KEY
+        sync: false
+      - key: VIKEY_BASE_URL
+        sync: false
+      - key: VIKEY_MODEL
+        value: openai/gpt-6-luna
+      - key: VIKEY_MODEL_FALLBACK
+        value: deepseek/deepseek-v4-flash
+      - key: PAID_DAILY_CAP
+        value: "300"
+      - key: ALLOWED_ORIGINS
+        value: "http://localhost:8080"          # add the Pages URL after it exists (deploy step 9)
