@@ -1,0 +1,494 @@
+{
+ "generated_by": "scripts/build_info.py",
+ "generated_at": "2026-11-06T18:28:24+00:00",
+ "stats": {
+  "speeches": 33,
+  "chunks": 142,
+  "total_words_raw": 59362,
+  "total_words_clean": 57444,
+  "total_chunk_words": 66164,
+  "date_min": "1959-12-08",
+  "date_max": "2011-05-13"
+ },
+ "decades": [
+  {
+   "decade": "1950s",
+   "count": 1
+  },
+  {
+   "decade": "1960s",
+   "count": 4
+  },
+  {
+   "decade": "1970s",
+   "count": 4
+  },
+  {
+   "decade": "1980s",
+   "count": 3
+  },
+  {
+   "decade": "1990s",
+   "count": 13
+  },
+  {
+   "decade": "2000s",
+   "count": 7
+  },
+  {
+   "decade": "2010s",
+   "count": 1
+  }
+ ],
+ "sources": [
+  "Australian PM Transcripts",
+  "NTUC",
+  "National Archives of Singapore",
+  "PMO Singapore"
+ ],
+ "flag_counts": {
+  "is_draft": 1,
+  "is_translation": 1,
+  "is_partial_malay": 1,
+  "is_letter": 1,
+  "is_toast": 1,
+  "is_qa": 1
+ },
+ "flag_labels": {
+  "is_draft": "NAS draft",
+  "is_translation": "English translation (likely delivered in Malay)",
+  "is_partial_malay": "Partly in Malay",
+  "is_letter": "Letter, not a speech",
+  "is_toast": "Short toast, not a full speech",
+  "is_qa": "Press-conference Q&A transcript"
+ },
+ "eval": {
+  "n": 17,
+  "recall_at_3": 0.88,
+  "recall_at_5": 0.94,
+  "mrr": 0.9,
+  "method": "hybrid dense (bge-small-en-v1.5) + BM25, RRF k=60, top-5",
+  "weak_spots": [
+   {
+    "question": "What did he say to young people about the future?",
+    "expected": [
+     "05"
+    ],
+    "first_hit_rank": null
+   },
+   {
+    "question": "What happened when Singapore separated from Malaysia in 1965?",
+    "expected": [
+     "02"
+    ],
+    "first_hit_rank": 4
+   }
+  ]
+ },
+ "model_chain": [
+  {
+   "tier": "free",
+   "provider": "openrouter",
+   "model": "google/gemma-4-26b-a4b-it:free",
+   "price_in_idr_per_million": 0,
+   "price_out_idr_per_million": 0,
+   "est_cost_idr_per_answer": 0.0,
+   "note": "Free tier. The free list rotates and free models are rate limited per model; if it fails, the chain moves on."
+  },
+  {
+   "tier": "paid",
+   "provider": "vikey",
+   "model": "deepseek/deepseek-v4-pro",
+   "price_in_idr_per_million": 1800,
+   "price_out_idr_per_million": 3600,
+   "est_cost_idr_per_answer": 5.0,
+   "note": "First paid fallback. About Rp 5 per answer."
+  },
+  {
+   "tier": "paid",
+   "provider": "vikey",
+   "model": "deepseek/deepseek-v4-flash",
+   "price_in_idr_per_million": 1080,
+   "price_out_idr_per_million": 1800,
+   "est_cost_idr_per_answer": 3.0,
+   "note": "Second paid fallback. About Rp 3 per answer."
+  }
+ ],
+ "speeches": [
+  {
+   "speech_id": "01",
+   "title": "Opening address, seminar on 'Education and Nation-Building'",
+   "date": "1966-12-27",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19661227.pdf",
+   "words_raw": 6240,
+   "words_clean": 6221,
+   "n_chunks": 15,
+   "flags": []
+  },
+  {
+   "speech_id": "02",
+   "title": "Transcript of press conference at Broadcasting House",
+   "date": "1965-08-09",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19650809b.pdf",
+   "words_raw": 6799,
+   "words_clean": 6742,
+   "n_chunks": 16,
+   "flags": [
+    "is_qa"
+   ]
+  },
+  {
+   "speech_id": "03",
+   "title": "Address to the American Society of Newspaper Editors",
+   "date": "1988-04-14",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19880414c.pdf",
+   "words_raw": 3771,
+   "words_clean": 3669,
+   "n_chunks": 9,
+   "flags": []
+  },
+  {
+   "speech_id": "04",
+   "title": "Speech at NTU International Conference on National Boundaries and Cultural Configurations",
+   "date": "2004-06-23",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/2004062302.htm",
+   "words_raw": 2507,
+   "words_clean": 2465,
+   "n_chunks": 6,
+   "flags": []
+  },
+  {
+   "speech_id": "05",
+   "title": "Speech to NUS/NTU/SMU students, Nanyang Auditorium",
+   "date": "2003-02-18",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/20030218_0001.pdf",
+   "words_raw": 2600,
+   "words_clean": 2594,
+   "n_chunks": 6,
+   "flags": []
+  },
+  {
+   "speech_id": "06",
+   "title": "Speech at Standard Chartered 150th Anniversary Charity Gala Dinner",
+   "date": "2003-04-25",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/20030425-SM.pdf",
+   "words_raw": 1996,
+   "words_clean": 1536,
+   "n_chunks": 4,
+   "flags": [
+    "is_draft"
+   ]
+  },
+  {
+   "speech_id": "07",
+   "title": "Speech at SCCCI Millennium Celebration Dinner",
+   "date": "1999-12-28",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/1999122802/lky19991228c.pdf",
+   "words_raw": 1033,
+   "words_clean": 1015,
+   "n_chunks": 3,
+   "flags": []
+  },
+  {
+   "speech_id": "08",
+   "title": "Speech at SPH Integration Seminar",
+   "date": "2009-04-12",
+   "source": "PMO Singapore",
+   "url": "https://www.pmo.gov.sg/newsroom/speech-mr-lee-kuan-yew-minister-mentor-sph-integration-seminar-12-april-2009-300-pm-sph/",
+   "words_raw": 1286,
+   "words_clean": 1281,
+   "n_chunks": 3,
+   "flags": []
+  },
+  {
+   "speech_id": "09",
+   "title": "Speech at Tanjong Pagar 44th National Day Celebration Dinner",
+   "date": "2009-08-13",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/20090821003.htm",
+   "words_raw": 1270,
+   "words_clean": 1268,
+   "n_chunks": 3,
+   "flags": []
+  },
+  {
+   "speech_id": "10",
+   "title": "Speech at NTUC 50th Anniversary Dinner, Marina Bay Sands",
+   "date": "2011-05-13",
+   "source": "NTUC",
+   "url": "https://www.ntuc.org.sg/uportal/news/Speech-by-Minister-Mentor-Lee-Kuan-Yew/",
+   "words_raw": 1757,
+   "words_clean": 1741,
+   "n_chunks": 4,
+   "flags": []
+  },
+  {
+   "speech_id": "11",
+   "title": "Speech at state dinner for Australian PM William McMahon",
+   "date": "1972-06-09",
+   "source": "Australian Government PM Transcripts",
+   "url": "https://pmtranscripts.pmc.gov.au/sites/default/files/original/00002615.pdf",
+   "words_raw": 794,
+   "words_clean": 794,
+   "n_chunks": 2,
+   "flags": []
+  },
+  {
+   "speech_id": "12",
+   "title": "Translation of speech at National Day Celebration Dinner, Geylang Serai",
+   "date": "1966-08-25",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19660825a.pdf",
+   "words_raw": 543,
+   "words_clean": 543,
+   "n_chunks": 2,
+   "flags": [
+    "is_translation"
+   ]
+  },
+  {
+   "speech_id": "13",
+   "title": "Speech at dinner in honour of National Servicemen, Tanjong Pagar Community Centre",
+   "date": "1968-09-15",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19680915.pdf",
+   "words_raw": 418,
+   "words_clean": 416,
+   "n_chunks": 1,
+   "flags": []
+  },
+  {
+   "speech_id": "14",
+   "title": "Speech on responsibilities of teachers, Education Ministry rally of teachers",
+   "date": "1959-12-08",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19591208.pdf",
+   "words_raw": 1405,
+   "words_clean": 1405,
+   "n_chunks": 4,
+   "flags": []
+  },
+  {
+   "speech_id": "15",
+   "title": "Speech at 5th Asian-Pacific Congress of Cardiology delegates dinner",
+   "date": "1972-10-13",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19721013.pdf",
+   "words_raw": 1682,
+   "words_clean": 1682,
+   "n_chunks": 4,
+   "flags": []
+  },
+  {
+   "speech_id": "16",
+   "title": "Address at Malay Teachers' Union Seminar, 'Facing Educational Challenges in the 1980s'",
+   "date": "1978-05-31",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19780531a.pdf",
+   "words_raw": 1965,
+   "words_clean": 1964,
+   "n_chunks": 5,
+   "flags": [
+    "is_partial_malay"
+   ]
+  },
+  {
+   "speech_id": "17",
+   "title": "Speech at opening of Singapore Polytechnic new campus, Dover Road",
+   "date": "1979-07-07",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19790707.pdf",
+   "words_raw": 1541,
+   "words_clean": 1305,
+   "n_chunks": 3,
+   "flags": []
+  },
+  {
+   "speech_id": "18",
+   "title": "Letter to all newspapers on recruiting native English-speaking teachers",
+   "date": "1980-03-26",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19800326.pdf",
+   "words_raw": 1193,
+   "words_clean": 1184,
+   "n_chunks": 3,
+   "flags": [
+    "is_letter"
+   ]
+  },
+  {
+   "speech_id": "19",
+   "title": "Speech at launching ceremony of the Speak Mandarin Campaign",
+   "date": "1989-10-03",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19891003.pdf",
+   "words_raw": 1340,
+   "words_clean": 506,
+   "n_chunks": 2,
+   "flags": []
+  },
+  {
+   "speech_id": "20",
+   "title": "Speech at SAFTI Military Institute ground-breaking ceremony",
+   "date": "1990-06-09",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19900609.pdf",
+   "words_raw": 862,
+   "words_clean": 861,
+   "n_chunks": 2,
+   "flags": []
+  },
+  {
+   "speech_id": "21",
+   "title": "Speech at People's Association 30th Anniversary Concert",
+   "date": "1990-06-30",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19900630.pdf",
+   "words_raw": 580,
+   "words_clean": 580,
+   "n_chunks": 2,
+   "flags": []
+  },
+  {
+   "speech_id": "22",
+   "title": "Speech at Raffles Institution fund-raising dinner",
+   "date": "1990-07-17",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19900717.pdf",
+   "words_raw": 1307,
+   "words_clean": 1306,
+   "n_chunks": 3,
+   "flags": []
+  },
+  {
+   "speech_id": "23",
+   "title": "Speech at dinner for the Establishment, Westin Hotel",
+   "date": "1990-08-29",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19900829.pdf",
+   "words_raw": 1189,
+   "words_clean": 1188,
+   "n_chunks": 3,
+   "flags": []
+  },
+  {
+   "speech_id": "24",
+   "title": "Speech at Prophet Muhammad's Birthday Memorial Scholarship Fund Board bursary awards",
+   "date": "1990-10-06",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19901006.pdf",
+   "words_raw": 319,
+   "words_clean": 318,
+   "n_chunks": 1,
+   "flags": []
+  },
+  {
+   "speech_id": "25",
+   "title": "Speech at the Pacific Rim Forum, Hong Kong",
+   "date": "1997-06-27",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/1997062704.htm",
+   "words_raw": 2494,
+   "words_clean": 2472,
+   "n_chunks": 6,
+   "flags": []
+  },
+  {
+   "speech_id": "26",
+   "title": "Speech at parliamentary debate on the Chinese Language Curriculum and Pedagogy Review Committee",
+   "date": "2004-11-25",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/2004112501.htm",
+   "words_raw": 5028,
+   "words_clean": 4982,
+   "n_chunks": 12,
+   "flags": []
+  },
+  {
+   "speech_id": "27",
+   "title": "Speech at Speak Mandarin Campaign 30th Anniversary launch, NTUC Auditorium",
+   "date": "2009-03-17",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/20090324003.htm",
+   "words_raw": 1267,
+   "words_clean": 1265,
+   "n_chunks": 3,
+   "flags": []
+  },
+  {
+   "speech_id": "28",
+   "title": "Speech at dinner hosted by Turkish PM Yildirim Akbulut",
+   "date": "1990-05-16",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19900516.pdf",
+   "words_raw": 483,
+   "words_clean": 480,
+   "n_chunks": 1,
+   "flags": [
+    "is_toast"
+   ]
+  },
+  {
+   "speech_id": "29",
+   "title": "Speech at fund-raising dinner for the new Polytechnic Guild building",
+   "date": "1991-10-26",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19911026.pdf",
+   "words_raw": 770,
+   "words_clean": 769,
+   "n_chunks": 2,
+   "flags": []
+  },
+  {
+   "speech_id": "30",
+   "title": "Speech at Tanjong Pagar and Tiong Bahru Lunar New Year get-together",
+   "date": "1995-02-05",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19950205.pdf",
+   "words_raw": 1285,
+   "words_clean": 1277,
+   "n_chunks": 3,
+   "flags": []
+  },
+  {
+   "speech_id": "31",
+   "title": "Speech at the opening of the United Overseas Bank (UOB) Plaza",
+   "date": "1995-08-06",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19950806.pdf",
+   "words_raw": 863,
+   "words_clean": 857,
+   "n_chunks": 2,
+   "flags": []
+  },
+  {
+   "speech_id": "32",
+   "title": "Speech at dinner hosted by French Ambassador Gerard Coste",
+   "date": "1995-10-16",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19951016.pdf",
+   "words_raw": 1658,
+   "words_clean": 1648,
+   "n_chunks": 4,
+   "flags": []
+  },
+  {
+   "speech_id": "33",
+   "title": "Speech at the launch of the National Orchid Garden",
+   "date": "1995-10-20",
+   "source": "NAS",
+   "url": "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19951020.pdf",
+   "words_raw": 1117,
+   "words_clean": 1110,
+   "n_chunks": 3,
+   "flags": []
+  }
+ ]
+}
