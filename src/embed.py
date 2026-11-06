@@ -8,11 +8,15 @@ from fastembed import TextEmbedding
 BASE = os.path.expanduser("~/workspace/aic-section1/lky-chatbot")
 MODEL = "BAAI/bge-small-en-v1.5"
 
+def _model_cache_dir():
+    return os.environ.get(
+        "MODEL_CACHE_DIR", os.path.join(BASE, ".cache", "fastembed"))
+
 def main():
     corpus = json.load(open(os.path.join(BASE, "corpus/corpus.json"), encoding="utf-8"))
     texts = [c["text"] for c in corpus]
     print(f"embedding {len(texts)} chunks with {MODEL} ...")
-    model = TextEmbedding(MODEL)
+    model = TextEmbedding(MODEL, cache_dir=_model_cache_dir())
     vecs = np.array(list(model.embed(texts)), dtype=np.float32)
     norms = np.linalg.norm(vecs, axis=1, keepdims=True)
     vecs = vecs / norms
