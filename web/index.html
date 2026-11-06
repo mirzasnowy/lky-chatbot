@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What Would Lee Kuan Yew Do? — a RAG chatbot</title>
+<style>
+  body { font-family: Georgia, serif; max-width: 720px; margin: 0 auto; padding: 24px 16px; color: #1a1a1a; line-height: 1.6; }
+  h1 { font-size: 1.6em; margin-bottom: 0.2em; }
+  .sub { color: #555; margin-top: 0; }
+  .chat { border: 1px solid #ddd; border-radius: 10px; padding: 16px; margin: 20px 0; }
+  .q { font-weight: bold; }
+  .a { white-space: pre-wrap; }
+  .sources { font-size: 0.85em; color: #555; margin-top: 12px; }
+  .sources a { color: #555; }
+  .meta { font-size: 0.85em; color: #777; }
+  .empty { border: 1px dashed #aaa; border-radius: 10px; padding: 16px; color: #555; }
+  a { color: #1a5fb4; }
+</style>
+</head>
+<body>
+<h1>What Would Lee Kuan Yew Do?</h1>
+<p class="sub">A chatbot that answers in Lee Kuan Yew's voice, grounded only in his own
+public speeches (13 speeches, 1965–2011, ~31,000 words). Every answer cites
+the speech it comes from. If a question is not covered by the speeches, it
+says so instead of inventing an answer.</p>
+<p class="meta">Built for Section 3 of the 99 Group AI Aptitude Challenge.
+Code, corpus, prompts and evaluation:
+<a href="https://github.com/mirzasnowy/lky-chatbot">github.com/mirzasnowy/lky-chatbot</a></p>
+<div id="chats"><p>Loading example chats…</p></div>
+<script>
+fetch('./chats.json').then(r => r.json()).then(d => {
+  const el = document.getElementById('chats');
+  if (!d.chats || d.chats.length === 0) {
+    el.innerHTML = '<div class="empty">No example chats generated yet. '
+      + 'Example chats are produced by running the real system (retrieval + '
+      + 'generation) and are added here with their sources — nothing is invented.</div>';
+    return;
+  }
+  el.innerHTML = '<p class="meta">Generated ' + (d.generated_at || '')
+    + ' with model ' + (d.model || '') + '.</p>'
+    + d.chats.map(c =>
+      '<div class="chat"><p class="q">Q: ' + c.question + '</p>'
+      + '<p class="a">' + c.answer + '</p>'
+      + '<p class="sources">Sources: ' + c.sources.map(s =>
+        '<a href="' + s.url + '">' + s.title + ' (' + s.date + ')</a>').join('; ')
+      + '</p></div>').join('');
+}).catch(() => {
+  document.getElementById('chats').innerHTML =
+    '<div class="empty">Could not load example chats.</div>';
+});
+</script>
+</body>
+</html>
