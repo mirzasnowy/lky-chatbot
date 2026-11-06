@@ -26,7 +26,7 @@ STOP = set("a an the and or of to in on for with by at from as is are was were b
 # about him, so the name does not discriminate between speeches, and "say" is
 # noise. Dropping them is standard IR practice for a single-author corpus.
 
-BASE = os.path.expanduser("~/workspace/aic-section1/lky-chatbot")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SYSTEM_PROMPT = open(os.path.join(BASE, "prompts/system.md"), encoding="utf-8").read()
 
 _model = None
