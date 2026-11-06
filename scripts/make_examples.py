@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""Generate the 8 real example chats for the LKY chatbot (design section 8).
+
+Calls retrieval + build_messages + llm.generate(only_tier="paid") directly
+(not via HTTP), so the examples come from the paid tier (Vikey v4-pro first,
+v4-flash if pro fails) for the best quality. Writes:
+  web/chats.json   (schema in design 7.6; read by the demo page)
+  docs/EXAMPLES.md (readable on GitHub, for an evaluator that runs no JS)
+
+Run with the real keys in the environment (never in a file):
+  VIKEY_API_KEY=... VIKEY_BASE_URL=https://api.vikey.ai/v1 \
+      .venv/bin/python scripts/make_examples.py
+
+The 6 in-scope questions are from the eval set and rank 1, except the
+separation question, which uses the wording "Why did Singapore leave
+Malaysia in 1965?" (the eval wording "What happened when Singapore
+separated..." ranks the expected speech 4th; this wording retrieved the
+separation chunks with the first at position 3 in a live test). The two
+out-of-scope questions must produce honest refusals, not answers.
+
+After generating, READ all 8 answers before submitting: every citation must
+point at a retrieved passage, and no date or number may appear that is not
+in the sources. If an answer is bad, fix the prompt and regenerate; never
+edit an answer by hand.
+"""
+import json
+import os
+import subprocess
+import sys
+import urllib.request
+from datetime import datetime, timezone
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+
+from src.llm import generate  # noqa: E402
+from src.rag import build_messages, retrieve  # noqa: E402
+
+QUESTIONS = [
+    ("ex1", "leadership",
+     "What did he say about Asian values and the renaissance of Asian culture?"),
+    ("ex2", "geopolitics",
+     "What was his view on the Hong Kong handover and US-China relations?"),
+    ("ex3", "history", "Why did Singapore leave Malaysia in 1965?"),
+    ("ex4", "economy",
+     "What was his economic outlook at the turn of the millennium?"),
+    ("ex5", "education",
+     "What did Lee Kuan Yew say about education and nation-building?"),
+    ("ex6", "governance", "What was his view on the press and government?"),
+    ("ex7", "out-of-scope-time",
+     "What do you think of Singapore's COVID-19 response?"),
+    ("ex8", "identity", "Are you really Lee Kuan Yew?"),
+]
+
+FLAGS = ("is_translation", "is_draft", "is_qa", "is_letter", "is_toast",
+         "is_partial_malay")
+
+
+def _sources(chunks):
+    return [{"chunk_id": c["chunk_id"], "title": c["title"], "date": c["date"],
+             "source": c["source"], "url": c["url"],
+             "score": round(c["score"], 4),
+             "flags": {k: v for k, v in c.items() if k in FLAGS and v}}
+            for c in chunks]
+
+
+def _git_commit():
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=BASE, text=True).strip()
+    except Exception:
+        pass
+    try:
+        req = urllib.request.Request(
+            "https://api.github.com/repos/mirzasnowy/lky-chatbot/commits/main",
+            headers={"Accept": "application/vnd.github+json"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.load(resp)["sha"]
+    except Exception:
+        return None
+
+
+def main():
+    items = []
+    total_cost = 0.0
+    for ex_id, category, q in QUESTIONS:
+        chunks = retrieve(q, k=5)
+        result = generate(build_messages(q, chunks), only_tier="paid")
+        if not result["ok"]:
+            print(f"{ex_id}: GENERATION FAILED attempts={result['attempts']}")
+            raise SystemExit(1)
+        total_cost += result["est_cost_idr"]
+        items.append({
+            "id": ex_id, "category": category, "question": q,
+            "answer": result["answer"],
+            "meta": {
+                "provider": result["provider"], "model": result["model"],
+                "tier": result["tier"],
+                "fallback_used": result["fallback_used"],
+                "attempts": result["attempts"],
+                "retrieval": {"k": 5,
+                              "top_score": round(chunks[0]["score"], 4)},
+                "usage": result["usage"],
+                "est_cost_idr": result["est_cost_idr"],
+            },
+            "sources": _sources(chunks),
+        })
+        print(f"{ex_id}: {result['provider']}/{result['model']} "
+              f"cost Rp {result['est_cost_idr']} "
+              f"top={[c['chunk_id'] for c in chunks]}")
+
+    out = {"generated_at": datetime.now(timezone.utc).isoformat(),
+           "generator": "scripts/make_examples.py",
+           "git_commit": _git_commit(),
+           "items": items}
+    os.makedirs(os.path.join(BASE, "web"), exist_ok=True)
+    os.makedirs(os.path.join(BASE, "docs"), exist_ok=True)
+    with open(os.path.join(BASE, "web", "chats.json"), "w") as f:
+        json.dump(out, f, indent=1, ensure_ascii=False)
+
+    lines = ["# LKY chatbot — real example conversations",
+             "",
+             "Generated by `scripts/make_examples.py` from the live pipeline "
+             "(retrieval + generation). Not edited. Each example records the "
+             "model, retrieval scores and sources.",
+             ""]
+    for it in items:
+        m = it["meta"]
+        lines += [f"## {it['id']} — {it['category']}",
+                  "",
+                  f"Q: {it['question']}",
+                  "",
+                  it["answer"],
+                  "",
+                  f"Model: {m['provider']} / {m['model']} (tier {m['tier']}, "
+                  f"fallback_used {m['fallback_used']}), top RRF score "
+                  f"{m['retrieval']['top_score']}, estimated cost "
+                  f"Rp {m['est_cost_idr']}.",
+                  "",
+                  "Sources:"]
+        for s in it["sources"]:
+            lines.append(f"- {s['title']} ({s['date']}, {s['source']}) — "
+                         f"{s['url']}")
+        lines.append("")
+    with open(os.path.join(BASE, "docs", "EXAMPLES.md"), "w") as f:
+        f.write("\n".join(lines))
+    print(f"wrote {len(items)} examples, total estimated cost Rp {total_cost:.2f}")
+
+
+if __name__ == "__main__":
+    main()
