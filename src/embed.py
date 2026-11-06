@@ -5,7 +5,7 @@ Model downloads once (~130MB) into ~/.cache/fastembed.
 import json, os, numpy as np
 from fastembed import TextEmbedding
 
-BASE = os.path.expanduser("~/workspace/aic-section1/lky-chatbot")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL = "BAAI/bge-small-en-v1.5"
 
 def _model_cache_dir():
