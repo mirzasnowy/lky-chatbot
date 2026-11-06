@@ -332,6 +332,7 @@
       "deepseek/deepseek-v4-pro": "DeepSeek V4 Pro",
       "deepseek/deepseek-v4-flash": "DeepSeek V4 Flash",
       "deepseek/deepseek-v4.1-flash": "DeepSeek V4.1 Flash",
+      "openai/gpt-6-luna": "GPT-6 Luna",
     };
     if (known[id]) return known[id];
     var base = id.split("/").pop().replace(/:free$/, "").replace(/-/g, " ");
