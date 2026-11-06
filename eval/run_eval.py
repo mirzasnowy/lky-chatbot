@@ -6,7 +6,7 @@ import json, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from rag import retrieve
 
-BASE = os.path.expanduser("~/workspace/aic-section1/lky-chatbot")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def main():
     qs = json.load(open(os.path.join(BASE, "eval/questions.json")))
