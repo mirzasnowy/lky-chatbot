@@ -27,6 +27,13 @@ OR_URL = "https://openrouter.ai/api/v1/chat/completions"
 OR_MODEL_DEFAULT = "google/gemma-4-26b-a4b-it:free"
 VIKEY_MODEL_DEFAULT = "openai/gpt-6-luna"
 VIKEY_MODEL_FALLBACK_DEFAULT = "deepseek/deepseek-v4-flash"
+VIKEY_MODEL_PRO_DEFAULT = "deepseek/deepseek-v4-pro"
+
+# Model choices the UI offers (POST /chat "model" field). "auto" is the
+# default chain order below; a named choice is tried first, then the rest
+# of the auto chain in order. "pro" is NOT in the auto chain (cost/quality,
+# as decided earlier) — it only runs when explicitly chosen.
+MODEL_CHOICES = ("auto", "free", "luna", "flash", "pro")
 
 # Rp per 1 million tokens (in, out), from Vikey's price list.
 PRICE_IDR = {
@@ -56,33 +63,58 @@ def reset_state():
     _paid.update(day=None, n=0)
 
 
-def build_chain():
-    """Build the tier list from env. A tier whose key is missing is skipped."""
-    chain = []
-    if os.getenv("OPENROUTER_API_KEY"):
-        chain.append({
-            "name": "openrouter", "provider": "openrouter", "tier": "free",
-            "url": OR_URL, "key": os.environ["OPENROUTER_API_KEY"],
-            "model": os.getenv("OPENROUTER_MODEL", OR_MODEL_DEFAULT),
-            "timeout": 25.0,
-            "headers": {
-                "HTTP-Referer": "https://github.com/mirzasnowy/lky-chatbot",
-                "X-Title": "LKY chatbot (99 Group AI Challenge, Section 3)",
-            },
-        })
+def _tier(name, provider, tier, url, key, model, timeout, headers=None):
+    return {"name": name, "provider": provider, "tier": tier,
+            "url": url, "key": key, "model": model, "timeout": timeout,
+            "headers": headers or {}}
+
+
+def _vikey_tier(name, env, default):
     base, vkey = os.getenv("VIKEY_BASE_URL"), os.getenv("VIKEY_API_KEY")
-    if base and vkey:
-        url = base.rstrip("/") + "/chat/completions"
-        for name, env, default in (
-            ("vikey-luna", "VIKEY_MODEL", VIKEY_MODEL_DEFAULT),
-            ("vikey-flash", "VIKEY_MODEL_FALLBACK", VIKEY_MODEL_FALLBACK_DEFAULT),
-        ):
-            chain.append({
-                "name": name, "provider": "vikey", "tier": "paid",
-                "url": url, "key": vkey,
-                "model": os.getenv(env, default), "timeout": 40.0,
-                "headers": {},
-            })
+    if not (base and vkey):
+        return None
+    return _tier(name, "vikey", "paid",
+                 base.rstrip("/") + "/chat/completions", vkey,
+                 os.getenv(env, default), 40.0)
+
+
+def _openrouter_tier():
+    if not os.getenv("OPENROUTER_API_KEY"):
+        return None
+    return _tier("openrouter", "openrouter", "free", OR_URL,
+                 os.environ["OPENROUTER_API_KEY"],
+                 os.getenv("OPENROUTER_MODEL", OR_MODEL_DEFAULT), 25.0,
+                 {"HTTP-Referer": "https://github.com/mirzasnowy/lky-chatbot",
+                  "X-Title": "LKY chatbot (99 Group AI Challenge, Section 3)"})
+
+
+def tier_for_choice(choice):
+    """The tier dict for one UI model choice, or None if its key is missing."""
+    if choice == "free":
+        return _openrouter_tier()
+    if choice == "luna":
+        return _vikey_tier("vikey-luna", "VIKEY_MODEL", VIKEY_MODEL_DEFAULT)
+    if choice == "flash":
+        return _vikey_tier("vikey-flash", "VIKEY_MODEL_FALLBACK",
+                           VIKEY_MODEL_FALLBACK_DEFAULT)
+    if choice == "pro":
+        return _vikey_tier("vikey-pro", "VIKEY_MODEL_PRO",
+                           VIKEY_MODEL_PRO_DEFAULT)
+    return None
+
+
+def build_chain():
+    """The default (auto) tier list from env. A tier whose key is missing
+    is skipped. Pro is NOT in the auto chain; it only runs when chosen."""
+    chain = []
+    t = _openrouter_tier()
+    if t:
+        chain.append(t)
+    for tier in (_vikey_tier("vikey-luna", "VIKEY_MODEL", VIKEY_MODEL_DEFAULT),
+                 _vikey_tier("vikey-flash", "VIKEY_MODEL_FALLBACK",
+                             VIKEY_MODEL_FALLBACK_DEFAULT)):
+        if tier:
+            chain.append(tier)
     return chain
 
 
@@ -132,11 +164,19 @@ def _clean(text):
     return re.sub(r"<think>.*?</think>", "", text or "", flags=re.S).strip()
 
 
-def generate(messages, only_tier=None):
+def generate(messages, only_tier=None, prefer=None):
     """Run the fallback chain. only_tier='paid' is for the example-chat
-    script (best-quality tier); it is never exposed by the public API."""
+    script (best-quality tier); it is never exposed by the public API.
+    prefer is a UI model choice (see MODEL_CHOICES): that tier is tried
+    first, then the rest of the auto chain in order. 'auto'/None keeps
+    the default order (free -> luna -> flash; pro is never in it)."""
     attempts = []
-    chain = [t for t in build_chain() if only_tier in (None, t["tier"])]
+    chain = build_chain()
+    if prefer and prefer != "auto":
+        pref = tier_for_choice(prefer)
+        if pref is not None:
+            chain = [pref] + [t for t in chain if t["name"] != pref["name"]]
+    chain = [t for t in chain if only_tier in (None, t["tier"])]
     for i, tier in enumerate(chain):
         rec = {"provider": tier["provider"], "model": tier["model"],
                "tier": tier["tier"]}
