@@ -29,6 +29,21 @@ SPEECHES = [
     ("11_19720609_australia.txt", "Speech at state dinner for Australian PM William McMahon", "1972-06-09", "Australian Government PM Transcripts", "https://pmtranscripts.pmc.gov.au/sites/default/files/original/00002615.pdf", {}),
     ("12_19660825_geylang.txt", "Translation of speech at National Day Celebration Dinner, Geylang Serai", "1966-08-25", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19660825a.pdf", {"is_translation": True}),
     ("13_19680915_ns.txt", "Speech at dinner in honour of National Servicemen, Tanjong Pagar Community Centre", "1968-09-15", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19680915.pdf", {}),
+    # --- expansion round 2 (2026-11-06): 14 more verified speeches ---
+    ("14_19591208_teachers.txt", "Speech on responsibilities of teachers, Education Ministry rally of teachers", "1959-12-08", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19591208.pdf", {}),
+    ("15_19721013_cardiology.txt", "Speech at 5th Asian-Pacific Congress of Cardiology delegates dinner", "1972-10-13", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19721013.pdf", {}),
+    ("16_19780531_malay_teachers.txt", "Address at Malay Teachers' Union Seminar, 'Facing Educational Challenges in the 1980s'", "1978-05-31", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19780531a.pdf", {"is_partial_malay": True}),
+    ("17_19790707_poly.txt", "Speech at opening of Singapore Polytechnic new campus, Dover Road", "1979-07-07", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19790707.pdf", {}),
+    ("18_19800326_letter.txt", "Letter to all newspapers on recruiting native English-speaking teachers", "1980-03-26", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19800326.pdf", {"is_letter": True}),
+    ("19_19891003_mandarin_launch.txt", "Speech at launching ceremony of the Speak Mandarin Campaign", "1989-10-03", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19891003.pdf", {}),
+    ("20_19900609_safti.txt", "Speech at SAFTI Military Institute ground-breaking ceremony", "1990-06-09", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19900609.pdf", {}),
+    ("21_19900630_pa.txt", "Speech at People's Association 30th Anniversary Concert", "1990-06-30", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19900630.pdf", {}),
+    ("22_19900717_raffles.txt", "Speech at Raffles Institution fund-raising dinner", "1990-07-17", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19900717.pdf", {}),
+    ("23_19900829_establishment.txt", "Speech at dinner for the Establishment, Westin Hotel", "1990-08-29", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19900829.pdf", {}),
+    ("24_19901006_prophet_fund.txt", "Speech at Prophet Muhammad's Birthday Memorial Scholarship Fund Board bursary awards", "1990-10-06", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19901006.pdf", {}),
+    ("25_19970627_pacific_rim.txt", "Speech at the Pacific Rim Forum, Hong Kong", "1997-06-27", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/1997062704.htm", {}),
+    ("26_20041125_parliament.txt", "Speech at parliamentary debate on the Chinese Language Curriculum and Pedagogy Review Committee", "2004-11-25", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/2004112501.htm", {}),
+    ("27_20090317_mandarin30.txt", "Speech at Speak Mandarin Campaign 30th Anniversary launch, NTUC Auditorium", "2009-03-17", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/20090324003.htm", {}),
 ]
 
 def clean(text: str, fname: str) -> str:
@@ -38,6 +53,12 @@ def clean(text: str, fname: str) -> str:
         s = ln.strip()
         if not s:
             continue
+        # appendix cut: statistical tables/annexes come AFTER the speech ends.
+        # A standalone "Table I" / "Annex A" line (or the press appendix header)
+        # means the speech is over; drop it and everything after. Inline
+        # references like "(See Annex A)" or "(Table I)" do not trigger this.
+        if re.match(r"^(Table\s+[IVX]+|Annex\s+[A-C])$", s) or s.startswith("CIRCULATION FIGURES"):
+            break
         # press-release header / page furniture
         if re.match(r"^(Singapore Government Press Release|Media Relations Division|MITA Building|Tel:\s*\d|SPEECH Report)$", s):
             dropped += 1; continue
