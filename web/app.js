@@ -215,6 +215,116 @@
     try { window.speechSynthesis.speak(u); } catch (e) { ttsResetButton(); }
   }
 
+  /* ---------------- passage lookup ----------------
+     The API's /chat sources carry no passage text (the server strips
+     it in _sources()), so the frontend ships the 142 chunk texts as a
+     static lookup (web/chunks.json, keyed by chunk_id) and fills the
+     passages in client-side. Lazy-loaded once and cached; it works
+     even while the server sleeps, and for restored history and
+     examples too (their sources carry chunk_id). Shared-view sources
+     carry chunk_id as well (see conversationForShare). */
+  var passagesPromise = null;
+  function loadPassages() {
+    if (!passagesPromise) {
+      passagesPromise = fetch("./chunks.json").then(function (r) {
+        if (!r.ok) throw new Error("chunks.json " + r.status);
+        return r.json();
+      }).catch(function () { return {}; });
+    }
+    return passagesPromise;
+  }
+  // Kick off early so the passages are usually cached by the time an
+  // answer renders.
+  loadPassages();
+
+  /* Question keywords, for highlighting inside passages. Common words
+     and the ever-present "Lee Kuan Yew / Singapore" are dropped so the
+     highlight marks what is distinctive about this question. */
+  var STOPWORDS = { what: 1, did: 1, he: 1, she: 1, say: 1, said: 1, about: 1,
+    the: 1, a: 1, an: 1, his: 1, her: 1, was: 1, were: 1, is: 1, are: 1,
+    do: 1, does: 1, how: 1, why: 1, when: 1, where: 1, which: 1, who: 1,
+    whom: 1, whose: 1, i: 1, you: 1, we: 1, they: 1, it: 1, its: 1,
+    this: 1, that: 1, these: 1, those: 1, and: 1, or: 1, of: 1, on: 1,
+    in: 1, to: 1, for: 1, with: 1, from: 1, at: 1, by: 1, as: 1,
+    lee: 1, kuan: 1, yew: 1, singapore: 1, think: 1, view: 1, opinion: 1 };
+  function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+  function questionTerms(q) {
+    if (!q) return [];
+    var seen = {}, terms = [];
+    String(q).toLowerCase().split(/[^a-z0-9]+/).forEach(function (w) {
+      if (w.length < 3 || STOPWORDS[w] || seen[w]) return;
+      seen[w] = 1;
+      terms.push(w);
+    });
+    return terms.slice(0, 12);
+  }
+  function appendHighlightedText(parent, text, terms) {
+    // Whole-word, case-insensitive matches go in <mark>; everything
+    // else stays a plain text node (no innerHTML of passage text).
+    if (!terms.length) { parent.appendChild(document.createTextNode(text)); return; }
+    var re = new RegExp("\\b(" + terms.map(escapeRegExp).join("|") + ")\\b", "gi");
+    var last = 0, m;
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) parent.appendChild(document.createTextNode(text.slice(last, m.index)));
+      var mark = document.createElement("mark");
+      mark.className = "hl";
+      mark.textContent = m[0];
+      parent.appendChild(mark);
+      last = re.lastIndex;
+    }
+    if (last < text.length) parent.appendChild(document.createTextNode(text.slice(last)));
+  }
+  function fillPassageText(el, text, terms, expanded) {
+    var clean = String(text).replace(/\s+/g, " ").trim();
+    var shown = clean;
+    if (!expanded && clean.length > 300) {
+      var cut = clean.slice(0, 300);
+      var sp = cut.lastIndexOf(" ");
+      shown = (sp > 200 ? cut.slice(0, sp) : cut) + " …";
+    }
+    el.textContent = "";
+    appendHighlightedText(el, shown, terms);
+  }
+  function addPassageBlock(main, text, terms) {
+    var wrap = document.createElement("div");
+    wrap.className = "src-passage-wrap";
+    var p = document.createElement("p");
+    p.className = "src-passage";
+    var expanded = false;
+    var toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "src-more";
+    var render = function () {
+      fillPassageText(p, text, terms, expanded);
+      toggle.textContent = expanded ? "Lihat lebih sedikit" : "Lihat selengkapnya";
+    };
+    toggle.addEventListener("click", function () { expanded = !expanded; render(); });
+    render();
+    wrap.appendChild(p);
+    if (String(text).replace(/\s+/g, " ").trim().length > 300) wrap.appendChild(toggle);
+    main.appendChild(wrap);
+  }
+  function attachPassage(main, subEl, src, terms) {
+    // Adds "Bagian X dari Y" to the sub line and the passage block.
+    // Prefers text shipped with the source; otherwise looks it up by
+    // chunk_id in the static chunks file. Sources without either
+    // (shared links from before chunk_id was encoded) stay as-is.
+    var apply = function (text, ci, n) {
+      if (typeof ci === "number" && typeof n === "number") {
+        subEl.textContent = subEl.textContent + " · Bagian " + (ci + 1) + " dari " + n;
+      }
+      if (text) addPassageBlock(main, text, terms);
+    };
+    if (typeof src.text === "string" && src.text) {
+      apply(src.text, src.chunk_index, src.n_chunks);
+    } else if (src.chunk_id) {
+      loadPassages().then(function (map) {
+        var p = map[src.chunk_id];
+        if (p) apply(p.t, p.i, p.n);
+      });
+    }
+  }
+
   /* ---------------- share conversation ----------------
      The link encodes the conversation in the URL hash (#share=...), so
      opening it reconstructs the chat client-side. Nothing is sent to a
@@ -226,7 +336,10 @@
         q: it.question,
         a: it.answer,
         s: (it.sources || []).map(function (src) {
-          return { t: src.title, d: src.date, u: src.url, s: src.source };
+          // No passage text and no source URL here: both would bloat
+          // the link. chunk_id is tiny and lets the shared view look
+          // the passage AND the URL up in chunks.json instead.
+          return { t: src.title, d: src.date, s: src.source, c: src.chunk_id };
         }),
         m: { model: it.meta && it.meta.model, provider: it.meta && it.meta.provider },
       };
@@ -240,15 +353,21 @@
     return JSON.parse(decodeURIComponent(escape(
       atob(b64.replace(/-/g, "+").replace(/_/g, "/")))));
   }
-  function conversationToMarkdown(items) {
-    return items.map(function (it) {
+  function conversationToMarkdown(items, urlMap) {
+    // Starts with a title line, never with "Q:": pasted into a browser
+    // address bar, a leading "Q:" was once misread as a drive letter
+    // (file:///Q:/...). Source URLs come from the chunks lookup
+    // (urlMap) when the payload itself carries none.
+    var body = items.map(function (it) {
       var out = "Q: " + it.q + "\n\n" + (it.a || "(no generated answer)") + "\n";
       (it.s || []).forEach(function (src, i) {
+        var u = src.u || (urlMap && src.c && urlMap[src.c] && urlMap[src.c].u);
         out += "\n[" + (i + 1) + "] " + src.t + (src.d ? " (" + src.d + ")" : "") +
-          (src.u ? " — " + src.u : "");
+          (u ? " — " + u : "");
       });
       return out;
     }).join("\n\n---\n\n");
+    return "# Lee Kuan Yew - Shared conversation\n\n" + body;
   }
   function copyText(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -273,13 +392,25 @@
     };
     if (!items.length) { done("Nothing to share yet"); return; }
     var url = location.origin + location.pathname + "#share=" + encodeShare(items);
-    if (url.length <= 2000) {
+    if (url.length <= 8000) {
       copyText(url).then(function () { done("Link copied"); },
                          function () { done("Copy failed"); });
     } else {
-      copyText(conversationToMarkdown(items)).then(
-        function () { done("Copied as text"); },
-        function () { done("Copy failed"); });
+      // Link would be too long: copy the conversation as text instead.
+      // The banner says so plainly, so the text is never mistaken for
+      // a link and pasted into an address bar.
+      loadPassages().then(function (map) {
+        copyText(conversationToMarkdown(items, map)).then(
+          function () {
+            done("Copied as text");
+            showBanner("warn", "The link would be too long, so this is the conversation as text. " +
+              "Paste it into a chat or document, not the browser address bar. " +
+              '<button type="button" class="btn" id="banner-share-ok">OK</button>');
+            var ok = document.getElementById("banner-share-ok");
+            if (ok) ok.addEventListener("click", hideBanner);
+          },
+          function () { done("Copy failed"); });
+      });
     }
   }
   function loadShared() {
@@ -294,11 +425,11 @@
       el.thread.appendChild(renderUserBubble(it.q, Date.now()));
       var sources = (it.s || []).map(function (s) {
         return { title: s.t, date: s.d, url: s.u, source: s.s || "",
-                 score: null, flags: {} };
+                 chunk_id: s.c, score: null, flags: {} };
       });
       el.thread.appendChild(renderAssistant(it.a, sources,
         { model: it.m && it.m.model, provider: it.m && it.m.provider },
-        Date.now(), false));
+        Date.now(), false, it.q));
     });
     el.composer.hidden = true;
     showBanner("warn", "Shared conversation — read-only. " +
@@ -479,7 +610,7 @@
       q.textContent = "Q: " + it.question;
       card.appendChild(q);
       card.appendChild(renderAssistant(it.answer, it.sources || [], it.meta || {},
-        it.generated_at || d.generated_at, true));
+        it.generated_at || d.generated_at, true, it.question));
       el["examples-col"].appendChild(card);
     });
   }
@@ -641,7 +772,7 @@
     hideEmptyState();
     items.forEach(function (it) {
       el.thread.appendChild(renderUserBubble(it.question, it.ts));
-      el.thread.appendChild(renderAssistant(it.answer, it.sources || [], it.meta || {}, it.ts, false));
+      el.thread.appendChild(renderAssistant(it.answer, it.sources || [], it.meta || {}, it.ts, false, it.question));
     });
     scrollToBottom();
   }
@@ -875,7 +1006,7 @@
     }
   }
 
-  function renderSources(sources, msgId, open) {
+  function renderSources(sources, msgId, open, question) {
     var details = document.createElement("details");
     details.className = "sources";
     if (open) details.open = true;
@@ -889,6 +1020,7 @@
     summary.appendChild(s2);
     details.appendChild(summary);
     var ol = document.createElement("ol");
+    var terms = questionTerms(question);
     sources.forEach(function (src, i) {
       var li = document.createElement("li");
       li.setAttribute("data-rank", String(i + 1));
@@ -900,15 +1032,28 @@
       main.className = "src-main";
       var title = document.createElement("div");
       title.className = "src-title";
-      if (src.url) {
-        var a = document.createElement("a");
-        a.href = src.url;
-        a.target = "_blank";
-        a.rel = "noopener";
-        a.textContent = src.title;
-        title.appendChild(a);
-      } else {
-        title.textContent = src.title;
+      var setTitleLink = function (url) {
+        title.textContent = "";
+        if (url) {
+          var a = document.createElement("a");
+          a.href = url;
+          a.target = "_blank";
+          a.rel = "noopener";
+          a.textContent = src.title;
+          title.appendChild(a);
+        } else {
+          title.textContent = src.title;
+        }
+      };
+      setTitleLink(src.url);
+      if (!src.url && src.chunk_id) {
+        // Shared-view sources carry no URL (it was dropped from the
+        // share payload to keep links short); look it up in chunks.json.
+        // Sources with neither stay plain text, never broken.
+        loadPassages().then(function (map) {
+          var p = map[src.chunk_id];
+          if (p && p.u) setTitleLink(p.u);
+        });
       }
       var sub = document.createElement("div");
       sub.className = "src-sub";
@@ -921,6 +1066,7 @@
         fl.textContent = FLAG_LABELS[f] || f;
         main.appendChild(fl);
       });
+      attachPassage(main, sub, src, terms);
       var score = document.createElement("span");
       score.className = "src-score";
       var sc = (typeof src.score === "number") ? src.score : null;
@@ -936,7 +1082,7 @@
     return details;
   }
 
-  function renderAssistant(answer, sources, meta, ts, isExample) {
+  function renderAssistant(answer, sources, meta, ts, isExample, question) {
     var msgId = ++state.msgCount;
     var wrap = document.createElement("div");
     wrap.className = "msg asst-msg";
@@ -1022,7 +1168,7 @@
     }
     if (metaLine.childNodes.length) body.appendChild(metaLine);
     if (sources && sources.length) {
-      body.appendChild(renderSources(sources, msgId, answer === null || answer === undefined));
+      body.appendChild(renderSources(sources, msgId, answer === null || answer === undefined, question));
     }
     var t = document.createElement("div");
     t.className = "time";
@@ -1181,7 +1327,7 @@
       if (res.status === 200) {
         var d = res.data;
         var aw = renderAssistant(
-          d.answer === null ? null : d.answer, d.sources || [], d.meta || {}, Date.now(), false);
+          d.answer === null ? null : d.answer, d.sources || [], d.meta || {}, Date.now(), false, q);
         aw.classList.add("fresh");
         el.thread.appendChild(aw);
         pushHistory({ question: q, answer: d.answer, sources: d.sources || [], meta: d.meta || {}, ts: Date.now() });
@@ -1275,6 +1421,7 @@
 
   /* ---------------- init ---------------- */
   renderTry();
+  autogrow(); // size the composer once at load (placeholder is 2 lines on mobile)
   var shared = loadShared();
   if (!shared) {
     restoreHistory();
