@@ -44,6 +44,13 @@ SPEECHES = [
     ("25_19970627_pacific_rim.txt", "Speech at the Pacific Rim Forum, Hong Kong", "1997-06-27", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/1997062704.htm", {}),
     ("26_20041125_parliament.txt", "Speech at parliamentary debate on the Chinese Language Curriculum and Pedagogy Review Committee", "2004-11-25", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/2004112501.htm", {}),
     ("27_20090317_mandarin30.txt", "Speech at Speak Mandarin Campaign 30th Anniversary launch, NTUC Auditorium", "2009-03-17", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/20090324003.htm", {}),
+    # --- expansion round 3 (2026-11-06): 6 ceremonial speeches ---
+    ("28_19900516_turkish.txt", "Speech at dinner hosted by Turkish PM Yildirim Akbulut", "1990-05-16", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19900516.pdf", {"is_toast": True}),
+    ("29_19911026_poly_guild.txt", "Speech at fund-raising dinner for the new Polytechnic Guild building", "1991-10-26", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19911026.pdf", {}),
+    ("30_19950205_lunar.txt", "Speech at Tanjong Pagar and Tiong Bahru Lunar New Year get-together", "1995-02-05", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19950205.pdf", {}),
+    ("31_19950806_uob.txt", "Speech at the opening of the United Overseas Bank (UOB) Plaza", "1995-08-06", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19950806.pdf", {}),
+    ("32_19951016_french_amb.txt", "Speech at dinner hosted by French Ambassador Gerard Coste", "1995-10-16", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19951016.pdf", {}),
+    ("33_19951020_orchid.txt", "Speech at the launch of the National Orchid Garden", "1995-10-20", "NAS", "https://www.nas.gov.sg/archivesonline/data/pdfdoc/lky19951020.pdf", {}),
 ]
 
 def clean(text: str, fname: str) -> str:
@@ -59,6 +66,9 @@ def clean(text: str, fname: str) -> str:
         # references like "(See Annex A)" or "(Table I)" do not trigger this.
         if re.match(r"^(Table\s+[IVX]+|Annex\s+[A-C])$", s) or s.startswith("CIRCULATION FIGURES"):
             break
+        # NAS doc footer on every PDF page, e.g. "lky\1995\lky1020.doc"
+        if re.match(r"^lky\\\d{4}\\[\w.]+$", s):
+            dropped += 1; continue
         # press-release header / page furniture
         if re.match(r"^(Singapore Government Press Release|Media Relations Division|MITA Building|Tel:\s*\d|SPEECH Report)$", s):
             dropped += 1; continue
