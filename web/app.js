@@ -51,12 +51,97 @@
   var el = {};
   ["live-pill", "pill-stats", "model-badge", "status-pill", "banner",
    "thread", "empty-state", "chips", "try-list", "composer", "input",
-   "counter", "send", "new-chat", "clear-history",
+   "counter", "send", "new-chat", "clear-history", "tts-stop",
    "tab-chat", "tab-examples", "tab-corpus", "tab-about"]
     .forEach(function (id) { el[id] = document.getElementById(id); });
 
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+
+  /* ---------------- collapsible side panels ---------------- */
+  var PANEL_KEYS = { sidebar: "lky-sidebar-open", panel: "lky-panel-open" };
+  function readPanelOpen(which) {
+    try { return localStorage.getItem(PANEL_KEYS[which]) !== "0"; } catch (e) { return true; }
+  }
+  function applyPanel(which, open) {
+    var layout = document.querySelector(".layout");
+    var isLeft = which === "sidebar";
+    layout.classList.toggle(isLeft ? "no-sidebar" : "no-panel", !open);
+    var btn = document.getElementById(isLeft ? "rail-left" : "rail-right");
+    btn.classList.toggle("closed", !open);
+    btn.textContent = isLeft ? (open ? "‹" : "›") : (open ? "›" : "‹");
+    var label = (open ? "Hide " : "Show ") + (isLeft ? "sidebar" : "panel");
+    btn.setAttribute("aria-label", label);
+    btn.title = label;
+    try { localStorage.setItem(PANEL_KEYS[which], open ? "1" : "0"); } catch (e) { /* ignore */ }
+  }
+  function togglePanel(which) { applyPanel(which, !readPanelOpen(which)); }
+  document.getElementById("rail-left").addEventListener("click", function () { togglePanel("sidebar"); });
+  document.getElementById("rail-right").addEventListener("click", function () { togglePanel("panel"); });
+  applyPanel("sidebar", readPanelOpen("sidebar"));
+  applyPanel("panel", readPanelOpen("panel"));
+
+  /* ---------------- text-to-speech (browser speechSynthesis, free) ----------------
+     No auto-read: a speaker button on each assistant message reads that
+     message aloud on tap; tapping it again (or the topbar Stop button)
+     stops the reading. If speechSynthesis is unavailable the buttons
+     are never rendered, so nothing errors. */
+  var TTS_SUPPORTED = ("speechSynthesis" in window) && ("SpeechSynthesisUtterance" in window);
+  var tts = { currentBtn: null, currentMsg: null };
+
+  function cleanSpeechText(answer) {
+    return String(answer)
+      .replace(/\[S\d+(?:\s*,\s*S\d+)*\]/g, "")  // [S1], [S1, S4]
+      .replace(/[*_`#]+/g, "")                    // markdown-ish artifacts
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  function pickEnglishVoice() {
+    try {
+      var voices = window.speechSynthesis.getVoices() || [];
+      var en = voices.filter(function (v) { return v.lang && v.lang.toLowerCase().indexOf("en") === 0; });
+      if (!en.length) return null;
+      var us = en.filter(function (v) { return v.lang.toLowerCase().indexOf("en-us") === 0; });
+      return us[0] || en[0];
+    } catch (e) { return null; }
+  }
+  function ttsResetButton() {
+    if (tts.currentBtn) {
+      tts.currentBtn.classList.remove("speaking");
+      tts.currentBtn.innerHTML = "&#128266; Listen";
+      tts.currentBtn.setAttribute("aria-label", "Listen to this answer");
+      tts.currentBtn = null;
+    }
+    tts.currentMsg = null;
+    el["tts-stop"].hidden = true;
+  }
+  function stopSpeech() {
+    if (!TTS_SUPPORTED) return;
+    try { window.speechSynthesis.cancel(); } catch (e) { /* ignore */ }
+    ttsResetButton();
+  }
+  function speakMessage(msgId, answer, btn) {
+    if (!TTS_SUPPORTED) return;
+    // Tapping the message that is already speaking stops it.
+    if (tts.currentMsg === msgId) { stopSpeech(); return; }
+    stopSpeech();
+    var text = cleanSpeechText(answer);
+    if (!text) return;
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US";
+    u.rate = 1;
+    var voice = pickEnglishVoice();
+    if (voice) u.voice = voice;
+    u.onend = function () { ttsResetButton(); };
+    u.onerror = function () { ttsResetButton(); };
+    tts.currentMsg = msgId;
+    tts.currentBtn = btn;
+    btn.classList.add("speaking");
+    btn.innerHTML = "&#9632; Stop";
+    btn.setAttribute("aria-label", "Stop reading this answer");
+    el["tts-stop"].hidden = false;
+    try { window.speechSynthesis.speak(u); } catch (e) { ttsResetButton(); }
+  }
 
   function fmtNum(n) { return Number(n).toLocaleString("en-US"); }
   function fmtTime(ts) {
@@ -406,6 +491,7 @@
     saveHistory(items);
   }
   function clearHistory() {
+    stopSpeech();
     try { localStorage.removeItem(HISTORY_KEY); } catch (e) { /* ignore */ }
     el.thread.innerHTML = "";
     el.thread.appendChild(el["empty-state"]);
@@ -660,6 +746,20 @@
       cost.textContent = "≈ Rp " + meta.est_cost_idr;
       metaLine.appendChild(cost);
     }
+    // Speaker button: tap to hear this answer read aloud, tap again to
+    // stop. Only when the browser has speechSynthesis; never auto-reads.
+    if (TTS_SUPPORTED && typeof answer === "string" && answer) {
+      if (metaLine.childNodes.length) sep();
+      var listen = document.createElement("button");
+      listen.type = "button";
+      listen.className = "listen-btn";
+      listen.innerHTML = "&#128266; Listen";
+      listen.setAttribute("aria-label", "Listen to this answer");
+      (function (mid, txt, b) {
+        b.addEventListener("click", function () { speakMessage(mid, txt, b); });
+      })(msgId, answer, listen);
+      metaLine.appendChild(listen);
+    }
     if (metaLine.childNodes.length) body.appendChild(metaLine);
     if (sources && sources.length) {
       body.appendChild(renderSources(sources, msgId, answer === null || answer === undefined));
@@ -901,6 +1001,7 @@
   });
   el["new-chat"].addEventListener("click", clearHistory);
   el["clear-history"].addEventListener("click", clearHistory);
+  if (TTS_SUPPORTED) el["tts-stop"].addEventListener("click", stopSpeech);
 
   /* ---------------- init ---------------- */
   renderTry();
