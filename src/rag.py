@@ -94,6 +94,10 @@ def build_context(chunks):
             tag += " [NAS labels this a draft]"
         if c.get("is_qa"):
             tag += " [press-conference Q&A transcript]"
+        if c.get("is_letter"):
+            tag += " [letter to newspapers, not a speech]"
+        if c.get("is_partial_malay"):
+            tag += " [delivered partly in Malay; this is the English transcript]"
         parts.append(f"--- Source: {tag} ---\n{c['text']}")
     return "\n\n".join(parts)
 
