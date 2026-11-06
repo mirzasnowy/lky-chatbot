@@ -1,6 +1,6 @@
 {
- "total_chunks": 127,
- "total_words": 59351,
+ "total_chunks": 142,
+ "total_words": 66164,
  "speeches": [
   {
    "speech_id": "01",
@@ -16,8 +16,8 @@
    "title": "Transcript of press conference at Broadcasting House",
    "date": "1965-08-09",
    "raw_words": 6799,
-   "clean_words": 6775,
-   "dropped_lines": 24,
+   "clean_words": 6742,
+   "dropped_lines": 57,
    "n_chunks": 16
   },
   {
@@ -115,8 +115,8 @@
    "title": "Speech at dinner in honour of National Servicemen, Tanjong Pagar Community Centre",
    "date": "1968-09-15",
    "raw_words": 418,
-   "clean_words": 418,
-   "dropped_lines": 0,
+   "clean_words": 416,
+   "dropped_lines": 2,
    "n_chunks": 1
   },
   {
@@ -151,8 +151,8 @@
    "title": "Speech at opening of Singapore Polytechnic new campus, Dover Road",
    "date": "1979-07-07",
    "raw_words": 1541,
-   "clean_words": 1312,
-   "dropped_lines": 0,
+   "clean_words": 1305,
+   "dropped_lines": 7,
    "n_chunks": 3
   },
   {
@@ -160,8 +160,8 @@
    "title": "Letter to all newspapers on recruiting native English-speaking teachers",
    "date": "1980-03-26",
    "raw_words": 1193,
-   "clean_words": 1190,
-   "dropped_lines": 1,
+   "clean_words": 1184,
+   "dropped_lines": 7,
    "n_chunks": 3
   },
   {
@@ -243,6 +243,60 @@
    "raw_words": 1267,
    "clean_words": 1265,
    "dropped_lines": 1,
+   "n_chunks": 3
+  },
+  {
+   "speech_id": "28",
+   "title": "Speech at dinner hosted by Turkish PM Yildirim Akbulut",
+   "date": "1990-05-16",
+   "raw_words": 483,
+   "clean_words": 480,
+   "dropped_lines": 1,
+   "n_chunks": 1
+  },
+  {
+   "speech_id": "29",
+   "title": "Speech at fund-raising dinner for the new Polytechnic Guild building",
+   "date": "1991-10-26",
+   "raw_words": 770,
+   "clean_words": 769,
+   "dropped_lines": 1,
+   "n_chunks": 2
+  },
+  {
+   "speech_id": "30",
+   "title": "Speech at Tanjong Pagar and Tiong Bahru Lunar New Year get-together",
+   "date": "1995-02-05",
+   "raw_words": 1285,
+   "clean_words": 1277,
+   "dropped_lines": 8,
+   "n_chunks": 3
+  },
+  {
+   "speech_id": "31",
+   "title": "Speech at the opening of the United Overseas Bank (UOB) Plaza",
+   "date": "1995-08-06",
+   "raw_words": 863,
+   "clean_words": 857,
+   "dropped_lines": 6,
+   "n_chunks": 2
+  },
+  {
+   "speech_id": "32",
+   "title": "Speech at dinner hosted by French Ambassador Gerard Coste",
+   "date": "1995-10-16",
+   "raw_words": 1658,
+   "clean_words": 1648,
+   "dropped_lines": 10,
+   "n_chunks": 4
+  },
+  {
+   "speech_id": "33",
+   "title": "Speech at the launch of the National Orchid Garden",
+   "date": "1995-10-20",
+   "raw_words": 1117,
+   "clean_words": 1110,
+   "dropped_lines": 7,
    "n_chunks": 3
   }
  ]
