@@ -296,7 +296,7 @@
     toggle.className = "src-more";
     var render = function () {
       fillPassageText(p, text, terms, expanded);
-      toggle.textContent = expanded ? "Lihat lebih sedikit" : "Lihat selengkapnya";
+      toggle.textContent = expanded ? "See less" : "See more";
     };
     toggle.addEventListener("click", function () { expanded = !expanded; render(); });
     render();
@@ -305,13 +305,13 @@
     main.appendChild(wrap);
   }
   function attachPassage(main, subEl, src, terms) {
-    // Adds "Bagian X dari Y" to the sub line and the passage block.
+    // Adds "Part X of Y" to the sub line and the passage block.
     // Prefers text shipped with the source; otherwise looks it up by
     // chunk_id in the static chunks file. Sources without either
     // (shared links from before chunk_id was encoded) stay as-is.
     var apply = function (text, ci, n) {
       if (typeof ci === "number" && typeof n === "number") {
-        subEl.textContent = subEl.textContent + " · Bagian " + (ci + 1) + " dari " + n;
+        subEl.textContent = subEl.textContent + " · Part " + (ci + 1) + " of " + n;
       }
       if (text) addPassageBlock(main, text, terms);
     };
